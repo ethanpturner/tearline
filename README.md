@@ -2,8 +2,18 @@
 
 **Status: verified against a real index.** `tearline` checks propagation, drift, and differential
 retrieval across eight scenarios and sixteen variants offline, and the PostgreSQL + `pgvector`
-backend is exercised in CI against a live database with row-level security enforced (DEC-017). The
-Qdrant adapter (DEC-018) is not built.
+backend is exercised in CI against a live database with row-level security enforced (DEC-017), and
+the Qdrant backend against a live Qdrant (DEC-018).
+
+The two are chosen for contrast rather than popularity, and they fail in opposite directions.
+Postgres enforces in the engine, so an application that forgets its filter still cannot cross the
+boundary and the residual risk is *completeness*. Qdrant filters on the payload value it is handed,
+so the boundary lives entirely in application code — `retrieve_unfiltered` demonstrates it by
+returning another tenant's points from the same query with the clause omitted.
+
+**Neither catches a propagation fault.** Both serve a mislabelled chunk faithfully and quickly to
+the wrong tenant while every control behaves correctly, which is the case for this tool and is now
+shown against real stores rather than argued from a fixture.
 
 ```
 uv run tearline verify benchmarks/untagged-chunk --variant faulted-naive
