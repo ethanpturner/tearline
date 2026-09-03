@@ -1,0 +1,21 @@
+# Identical in both faulted variants: the propagation finding is a property of the data, and does
+# not depend on how enforcement happens to behave. That is the point of having both variants --
+# the tool reports this before enforcement turns it into an incident.
+chunks_examined: 3
+chunks_untraceable: 0
+
+expected_findings:
+  - chunk_id: c-0042
+    verdict: contradicted
+    cause: propagation-fault
+    expected: { state: stated, tenants: [acme], roles: [finance], principals: [] }
+    observed: { state: unknown, tenants: [], roles: [], principals: [] }
+    why: >-
+      doc-004 states a tenant and a role; the chunk carries neither. The index does not contradict
+      the source by asserting something different -- it fails to carry the entitlement at all, and
+      the claim under test is that each chunk carries its source's entitlement. That claim is
+      false, so the verdict is `contradicted` rather than `unverifiable`: nothing about the
+      instrument was limited here, and the absence is fully determinable.
+    why_not_drift: >-
+      doc-004's `acl_modified_at` is 2026-01-13 and `ingested_at` is 2026-02-01. The ACL has not
+      moved, so the chunk never carried it (DEC-006).

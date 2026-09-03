@@ -291,3 +291,39 @@ stated makes the assumption visible at the point where someone can check it.
 any verification can run. That is real friction, and it is also the most valuable part of the
 exercise — an organisation that cannot state its own entitlement rule has learned something before
 the tool has emitted a single finding.
+
+---
+
+## DEC-013 — A fixture variant declares its enforcement model from a closed set
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Decision.** Each variant of a scenario declares a `filter` naming how the system under test
+enforces entitlements. The set is closed, implemented in `scripts/validate_fixtures.py`, and grown
+by decision-log entry. The initial members are `rule` (enforcement matching the source system's
+stated entitlement rule) and `naive-tenant-exclusion` (absence read as no restriction).
+
+**Why.** Faults live in two places and the fixture format only expressed one. In
+`wrong-tenant-tag` the fault is in the data, so "what the system returns" and "the stated rule
+applied to the index" are the same computation. In `untagged-chunk` they are not: the data is
+identically wrong in two variants, and enforcement decides whether that is a latent defect or a
+cross-tenant disclosure.
+
+Conflating them would make a whole class of failure inexpressible — every enforcement bug, which is
+where the OWASP guidance and the documented enterprise oversharing cases actually concentrate.
+
+**Why the set is closed.** A fixture that could describe enforcement in free form could prove
+anything, because the author would be writing both the bug and the expectation. Restricting to
+implemented, named models means a scenario asserts *this specific, previously described enforcement
+behaviour produces this outcome*, and adding a model requires arguing that a real system behaves
+that way. This is the same treatment DEC-010 gives backends and for the same reason.
+
+**Alternatives considered.** Letting a variant author the observed visibility outright, with no
+model. Rejected: the checker could then no longer verify the scenario's own arithmetic, which is
+the thing that has already caught authoring errors, and a scenario would become unfalsifiable
+assertion.
+
+**Tradeoffs.** A real system whose enforcement matches no implemented model cannot be represented
+until a model is added. That friction is intended: it forces the behaviour to be described before it
+is depended on.

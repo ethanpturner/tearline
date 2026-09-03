@@ -1,0 +1,6 @@
+# Entitlements propagated correctly, and enforcement matching the stated rule. Nothing to find.
+filter: rule
+chunks:
+  - { id: c-0032, source_document_id: doc-003, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0041, source_document_id: doc-004, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }
+  - { id: c-0042, source_document_id: doc-004, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }

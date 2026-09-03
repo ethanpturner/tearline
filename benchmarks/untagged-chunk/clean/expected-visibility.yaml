@@ -1,0 +1,4 @@
+visibility:
+  - { probe: pr-003, principal: p-acme-eng,   visible: [c-0032],                 over_retrieved: [], under_retrieved: [], outcome: clean }
+  - { probe: pr-003, principal: p-globex-eng, visible: [c-0032],                 over_retrieved: [], under_retrieved: [], outcome: clean }
+  - { probe: pr-003, principal: p-acme-fin,   visible: [c-0032, c-0041, c-0042], over_retrieved: [], under_retrieved: [], outcome: clean }

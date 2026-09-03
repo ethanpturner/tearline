@@ -1,0 +1,6 @@
+# `matches` is the pre-filter relevance result, supplied as given data (DEC-011).
+probes:
+  - id: pr-003
+    query: finance policy and approval thresholds
+    principals: [p-acme-eng, p-globex-eng, p-acme-fin]
+    matches: [c-0032, c-0041, c-0042]

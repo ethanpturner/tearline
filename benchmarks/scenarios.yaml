@@ -19,6 +19,17 @@ scenarios:
     # (over-retrieval) and the globex principal loses its own (under-retrieval). A leak-only tool
     # finds half of this fault and reports the other half as healthy.
 
+  - slug: untagged-chunk
+    name: Chunk reaches the index with no entitlement metadata
+    path: benchmarks/untagged-chunk
+    status: recorded
+    category: propagation
+    # Three variants, because the same ingestion fault is latent or catastrophic depending on
+    # enforcement. Under the stated rule the chunk is withheld from the person entitled to it;
+    # under a filter that reads absence as no-restriction it reaches a different tenant entirely.
+    # The first tool-visible symptom of the latent case is under-retrieval, which points away from
+    # the real problem.
+
 # Intended first scenarios. Each is built from a correct corpus plus one named fault, and runs
 # twice -- once where the fault must be found, once against the clean version where nothing must be.
 #

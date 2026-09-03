@@ -1,0 +1,11 @@
+# The same ingestion fault as ../faulted/, plus the enforcement bug DEC-003 exists to name: a
+# filter written as "exclude chunks whose tenant differs from the caller's" never excludes a chunk
+# that has no tenant at all.
+#
+# The index data is byte-identical to ../faulted/index.yaml except for the `filter` line. The fault
+# under test here is in enforcement, not in the data.
+filter: naive-tenant-exclusion
+chunks:
+  - { id: c-0032, source_document_id: doc-003, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0041, source_document_id: doc-004, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }
+  - { id: c-0042, source_document_id: doc-004, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: unknown, tenants: [], roles: [], principals: [] } }

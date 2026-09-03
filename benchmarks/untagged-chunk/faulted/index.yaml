@@ -1,0 +1,11 @@
+# One ingestion fault: c-0042 reached the index with no entitlement metadata. Enforcement still
+# matches the stated rule, which treats `unknown` as a grant to nobody (DEC-003).
+#
+# This variant exists to show the tool reports the fault BEFORE it becomes an incident. Nothing
+# leaks here. What happens instead is that the chunk is withheld from the one principal actually
+# entitled to it -- the fault is latent, and its only visible symptom is under-retrieval.
+filter: rule
+chunks:
+  - { id: c-0032, source_document_id: doc-003, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0041, source_document_id: doc-004, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }
+  - { id: c-0042, source_document_id: doc-004, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: unknown, tenants: [], roles: [], principals: [] } }

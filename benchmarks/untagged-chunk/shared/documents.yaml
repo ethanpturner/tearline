@@ -1,0 +1,30 @@
+# Source documents and the ACLs the source system reports for them. This is ground truth
+# (DEC-005): where the index disagrees, the index is wrong.
+#
+# No document text appears here. The fixture models a corpus by its identifiers and permissions,
+# because those are the only properties under test (DEC-002).
+
+system: fixture-kb
+
+documents:
+  - id: doc-001
+    label: Acme onboarding guide
+    acl_modified_at: 2026-01-10T09:00:00Z
+    entitlement: { state: stated, tenants: [acme], roles: [employee], principals: [] }
+
+  - id: doc-002
+    label: Globex pricing model
+    acl_modified_at: 2026-01-11T09:00:00Z
+    entitlement: { state: stated, tenants: [globex], roles: [employee], principals: [] }
+
+  - id: doc-003
+    label: Shared staff handbook
+    acl_modified_at: 2026-01-12T09:00:00Z
+    # A genuinely open document is `stated` carrying the source system's own public marker.
+    # There is no permissive value to default to (DEC-003).
+    entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] }
+
+  - id: doc-004
+    label: Acme finance policy
+    acl_modified_at: 2026-01-13T09:00:00Z
+    entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] }

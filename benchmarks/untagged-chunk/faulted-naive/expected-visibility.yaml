@@ -1,0 +1,26 @@
+# The same ingestion fault, now with the enforcement bug DEC-003 names. The untagged chunk is
+# admitted to everyone, including a principal in a different tenant.
+visibility:
+  - probe: pr-003
+    principal: p-acme-eng
+    visible: [c-0032, c-0042]
+    over_retrieved: [c-0042]
+    under_retrieved: []
+    outcome: over-retrieval
+    why: >-
+      c-0042 comes from doc-004, which requires the `finance` role. The chunk carries no metadata,
+      so the naive filter finds nothing to exclude on and admits it.
+
+  - probe: pr-003
+    principal: p-globex-eng
+    visible: [c-0032, c-0042]
+    over_retrieved: [c-0042]
+    under_retrieved: []
+    outcome: over-retrieval
+    why: >-
+      The serious one. A restricted finance document reaches a principal in a **different tenant**.
+      Note that c-0041 -- the sibling chunk from the same document, correctly tagged -- is properly
+      excluded for this principal. The tenant boundary works. It is simply not consulted for a
+      chunk that declines to mention one.
+
+  - { probe: pr-003, principal: p-acme-fin, visible: [c-0032, c-0041, c-0042], over_retrieved: [], under_retrieved: [], outcome: clean }

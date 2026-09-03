@@ -1,0 +1,16 @@
+# The ingestion fault alone, contained by a correct filter. Nothing leaks; the only symptom is that
+# the chunk is withheld from the one principal entitled to it.
+visibility:
+  - { probe: pr-003, principal: p-acme-eng,   visible: [c-0032],          over_retrieved: [], under_retrieved: [],        outcome: clean }
+  - { probe: pr-003, principal: p-globex-eng, visible: [c-0032],          over_retrieved: [], under_retrieved: [],        outcome: clean }
+  - probe: pr-003
+    principal: p-acme-fin
+    visible: [c-0032, c-0041]
+    over_retrieved: []
+    under_retrieved: [c-0042]
+    outcome: under-retrieval
+    why: >-
+      The stated rule treats `unknown` as a grant to nobody (DEC-003), so the untagged chunk is
+      withheld from the finance analyst who is in fact entitled to it. This is the fault's only
+      visible symptom under correct enforcement, and it points away from the actual problem: it
+      looks like a retrieval gap, not a permissions gap.

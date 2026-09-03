@@ -1,0 +1,7 @@
+# Empty. Every chunk traces to a document, every timestamp is present, and the probe runs three
+# principals -- so nothing here is limited by the instrument.
+#
+# In particular, an `unknown` entitlement is NOT unverifiable. The tool can determine perfectly well
+# that the chunk lacks the entitlement its source states; what is unknown is what the index intended,
+# and that is not a question the tool asks (DEC-003).
+expected_unverifiable: []

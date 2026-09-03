@@ -1,0 +1,20 @@
+inherits: ../clean/expected-clean.yaml
+
+must_not_flag:
+  - case: "c-0041 is excluded for p-globex-eng and p-acme-eng"
+    why: >-
+      The correctly tagged sibling is correctly excluded, by tenant and by role respectively. The
+      enforcement bug is specific to absent metadata; reporting the working exclusions as findings
+      would bury the one that matters.
+
+must_not_conclude:
+  - claim: "the tenant boundary is broken"
+    why: >-
+      It is not. c-0041 is excluded for the globex principal by exactly that boundary, in the same
+      run. The boundary is simply never consulted for a chunk that declines to mention one, which
+      is a narrower and more fixable statement.
+
+  - claim: "doc-004 is over-shared in the source system"
+    why: >-
+      doc-004's ACL is correct. Sending an operator to tighten it fixes nothing and removes access
+      from the analyst who legitimately has it.

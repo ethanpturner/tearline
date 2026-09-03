@@ -1,0 +1,21 @@
+inherits: ../clean/expected-clean.yaml
+
+must_not_flag:
+  - case: "c-0041 is not flagged"
+    why: >-
+      The sibling chunk from the same source document is correctly tagged. One chunk losing its
+      metadata does not implicate the rest of the document.
+
+must_not_conclude:
+  - claim: "retrieval is working correctly because nothing leaked"
+    why: >-
+      **The finding this variant exists for.** Enforcement contained the fault, and the fault is
+      still there. A tool that only reports realised disclosures would pass this index and then be
+      surprised when the same data is served by a system with a more permissive filter -- which is
+      exactly ../faulted-naive/, byte-identical but for one line.
+
+  - claim: "p-acme-fin has insufficient permissions"
+    why: >-
+      The under-retrieval symptom points at the principal, and the principal is correctly
+      privileged. The chunk is at fault. An operator who follows the symptom will widen a grant
+      that is already right, and the untagged chunk will still be untagged.

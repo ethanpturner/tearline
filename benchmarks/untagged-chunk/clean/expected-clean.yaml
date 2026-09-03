@@ -1,0 +1,10 @@
+must_not_flag:
+  - case: "c-0042 is visible to p-acme-fin"
+    why: >-
+      Correctly tagged and correctly returned. A tool biased toward reporting restricted material
+      would flag any retrieval of a finance document; the finance analyst is entitled to it.
+
+  - case: "p-acme-eng and p-globex-eng do not receive c-0041 or c-0042"
+    why: >-
+      Correct exclusion by role and by tenant. Absence from a result set is only a finding when the
+      principal was entitled and the chunk matched.
