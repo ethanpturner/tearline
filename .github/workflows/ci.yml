@@ -108,12 +108,16 @@ jobs:
   # The backend adapter is verified here and nowhere else: there is no local Postgres, so this
   # service container is where DEC-017's claims about engine enforcement actually get tested rather
   # than asserted. The suite is deselected by the `live` marker in every other context.
-  pgvector:
-    name: pgvector + row-level security
+  backends:
+    name: live backends (pgvector, qdrant)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     services:
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports: ["6333:6333"]
+
       postgres:
         image: pgvector/pgvector:pg17
         env:
@@ -162,6 +166,7 @@ jobs:
         env:
           TEARLINE_PG_DSN: postgresql://reader:reader@localhost:5432/tearline
           TEARLINE_PG_ADMIN_DSN: postgresql://postgres:tearline@localhost:5432/tearline
+          TEARLINE_QDRANT_URL: http://localhost:6333
         run: uv run pytest -m live -q
 
       # A green live suite would be worthless if the marker filter silently selected nothing.
@@ -170,6 +175,7 @@ jobs:
         env:
           TEARLINE_PG_DSN: postgresql://reader:reader@localhost:5432/tearline
           TEARLINE_PG_ADMIN_DSN: postgresql://postgres:tearline@localhost:5432/tearline
+          TEARLINE_QDRANT_URL: http://localhost:6333
         run: |
           uv run pytest -m live -q 2>&1 | tee /tmp/live.txt || true
           # Distinguish "selected nothing" from "ran and failed". The previous version reported
