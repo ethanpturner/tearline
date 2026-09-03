@@ -1,8 +1,9 @@
 # tearline
 
-**Status: verification runs against fixtures.** `tearline` checks propagation, drift, and
-differential retrieval across eight scenarios and sixteen variants, offline. Backend adapters —
-connecting it to a real index and source system — are not built (DEC-017, DEC-018).
+**Status: verified against a real index.** `tearline` checks propagation, drift, and differential
+retrieval across eight scenarios and sixteen variants offline, and the PostgreSQL + `pgvector`
+backend is exercised in CI against a live database with row-level security enforced (DEC-017). The
+Qdrant adapter (DEC-018) is not built.
 
 ```
 uv run tearline verify benchmarks/untagged-chunk --variant faulted-naive
