@@ -68,11 +68,11 @@ One of three tools sharing a thesis: a security claim should be a checkable arti
 assertion. The others are [`whence`](https://github.com/ethanpturner/whence) (model provenance) and
 `attestrun` (evaluation attestation, not yet started).
 
-**The three-valued verdict is implemented here for the third time** — `whence`'s domain model,
-`whence`'s pin verifier, and this repository. Extraction into `attestrun` is due and this is
-intended to be the last local copy; a fourth hand-written implementation is a mistake, not a
-pattern. Do not build a shared commons package for projects that do not yet exist, but do not add
-another copy either.
+The three-valued verdict is **declared** in both data models and **implemented** in exactly one
+place, `whence/scripts/verify_pins.py`. Extraction into `attestrun` becomes due when it is
+implemented with behaviour in two places, which has not happened — neither project has product code.
+Two documents agreeing on three words is a shared vocabulary, not duplication. Do not build a
+commons package, and do not treat the shared vocabulary as debt.
 
 The claimed-versus-verified distinction is inherited from Trace's DEC-009. Cite that lineage where
 it is load-bearing; do not continue another project's decision numbering here.

@@ -30,10 +30,17 @@ The failure it prevents is specific to this domain and worse than it first looks
 reports "no leaks found" when it could not evaluate half the corpus produces exactly the false
 assurance the tool exists to remove, and it produces it in the reassuring direction.
 
-**Note on lineage.** This is the third hand-written implementation of this vocabulary: `whence`'s
-domain model, `whence`'s pin verifier, and now here. Extraction into `attestrun` is due, and this is
-intended to be the last local copy. Recorded so that a fourth is treated as a mistake rather than a
-pattern.
+**Note on lineage.** This is the third *declaration* of the vocabulary — `whence`'s data model,
+`whence`'s pin verifier, and this data model — but only the pin verifier is code. Counted
+accurately: **declared three times, implemented once.**
+
+**Corrected 2026-09-03.** An earlier version of this entry called it the third hand-written
+implementation and said extraction into `attestrun` was due. That overstated the duplication by
+counting design documents as implementations, and the conclusion followed from the overstatement.
+Two data-model tables agreeing on three words is not duplication worth factoring out; it is a shared
+vocabulary, which is what a portfolio thesis is supposed to look like. Extraction becomes due when
+the vocabulary is implemented, with behaviour, in two places — and neither project has product code
+yet.
 
 ---
 
