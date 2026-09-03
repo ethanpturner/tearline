@@ -1,0 +1,46 @@
+# The scenario registry. The evaluation harness reads scenarios from this file and never discovers
+# them by scanning directories. A registry makes the benchmark set a stated fact rather than a fact
+# about the filesystem.
+#
+# status: planned | recorded | unobserved | live
+#   planned    - authored, no fixture built yet
+#   recorded   - fixture exists and runs offline
+#   unobserved - authored, and the case was searched for and not found in the systems examined
+#   live       - requires a real backend; excluded from the default run
+
+version: 0.1
+scenarios: []
+
+# Intended first scenarios. Each is built from a correct corpus plus one named fault, and runs
+# twice -- once where the fault must be found, once against the clean version where nothing must be.
+#
+# - slug: wrong-tenant-tag
+#   measures: the basic propagation fault. A chunk carries a tenant its source document does not.
+#
+# - slug: untagged-chunk
+#   measures: DEC-003. A chunk with no entitlement metadata. The natural filter admits it; the
+#             correct output is `unknown` and a finding, never a pass.
+#
+# - slug: narrowed-after-ingest
+#   measures: drift distinguishable from a propagation fault, with timestamps present.
+#
+# - slug: narrowed-without-timestamps
+#   measures: the same drift with timestamps unavailable. Correct output is `entitlement-mismatch`
+#             with cause `unverifiable` -- the tool must not guess which of the two it is.
+#
+# - slug: orphaned-chunk
+#   measures: a chunk whose source document cannot be located. `unverifiable`, counted in
+#             chunks_untraceable, and never counted as clean.
+#
+# - slug: post-filter-truncation
+#   measures: DEC-008. Correct tags, filtering applied after the ANN scan, so an entitled principal
+#             receives nothing. No leak, and still a finding. The scenario a leak-only tool passes.
+#
+# - slug: boundary-crossing-chunk
+#   measures: a chunk spanning a restricted appendix and public body. The source system does not
+#             determine the answer; the correct output is `unverifiable`, and this is the case most
+#             likely to be abused as a disposal route for inconvenient failures.
+#
+# - slug: single-principal-probe
+#   measures: DEC-007. Only one identity available. The probe does not run and the report says so;
+#             "no leak detected" is the forbidden output.

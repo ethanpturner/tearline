@@ -1,0 +1,62 @@
+# tearline
+
+**Status: design. Nothing is built.** This repository holds the scope, the decision log, the data
+model, and the evaluation plan. No code has been written, and every statement about behaviour below
+is a statement of intent.
+
+## What this is designed to be
+
+`tearline` is designed to verify that a retrieval system's access control is real: that every chunk
+in an index carries the entitlement its source document actually has, that those entitlements have
+not drifted since ingestion, and that retrieval under one identity never returns content only
+another identity may see.
+
+A tearline, in an intelligence document, is the line below which the content is releasable to a
+wider audience. The name is the unit of work: the tool is designed to check that the line in the
+index is where the source system says it should be.
+
+## Why this does not already exist
+
+OWASP's RAG Security Cheat Sheet prescribes three controls: store access-control metadata
+(classification, owner, permitted roles, permitted tenants) alongside every vector chunk;
+cryptographically sign source attribution; and perform regular cross-tenant testing to verify zero
+cross-boundary retrieval. It names no tool for any of them.
+
+The surrounding ecosystem does not fill the gap. Vector databases enforce the tenant filter they are
+handed and never ask whether the tag is true. Authorization engines answer *is this principal
+allowed to call this tool* — a question the application must remember to ask, and one whose honest
+answer during a confused-deputy retrieval is yes. Red-teaming harnesses drive adversarial text at a
+chat endpoint and never touch the index. Evaluation frameworks score whether retrieved text was
+*relevant*, never whether it was *permitted*.
+
+The one widely-cited real-world instance is the Microsoft 365 Copilot oversharing pattern, and the
+framing that stuck is that Copilot did not overshare the data — the permissions did. The vendor
+response is containment: stop indexing the risky material until it is cleaned up. There is no
+verifier.
+
+## The two failures it is designed to measure
+
+**Over-retrieval** is the obvious one: an identity receives a chunk it is not entitled to.
+
+**Under-retrieval** is the one that gets missed. Where entitlement filtering is applied after an
+approximate nearest-neighbour scan, a highly selective policy can return nothing while matching
+content exists. Confidentiality holds and completeness silently breaks — and a generation step handed
+no context does not error, it answers anyway. A tool that measures only leaks would call that
+system perfectly secure.
+
+Both are measured. So is the false-positive rate against legitimate retrieval, because a verifier
+that flags ordinary access is one nobody keeps running.
+
+## Intended scope
+
+`docs/architecture/project-scope.md` for scope and non-goals, `docs/architecture/decision-log.md`
+for what is decided and why, `docs/architecture/evaluation-plan.md` for how it is intended to be
+measured.
+
+## Lineage
+
+The claimed-versus-verified distinction is inherited from Trace, where it is recorded as DEC-009: a
+finding means evidence supports a weakness, a documentation gap means it could not be determined
+whether a control exists, and collapsing the two is the failure that project exists to avoid.
+`whence` applies it to model provenance. `tearline` applies it to retrieval entitlements: an
+entitlement tag is a claim, and the source system's ACL is what it is a claim about.

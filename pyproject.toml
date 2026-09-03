@@ -1,0 +1,64 @@
+[project]
+name = "tearline"
+version = "0.1.0"
+description = "Verifies that a retrieval index's entitlements match the source system's, and that retrieval respects them"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Ethan Turner", email = "ethanpturner@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.13.4",
+    # Fixtures, entitlement maps, and the scenario registry are YAML. Used through `safe_load`
+    # only: the default loader constructs arbitrary Python objects from document content, which is
+    # code execution chosen by an untrusted input file.
+    "pyyaml>=6.0.3",
+]
+
+[project.scripts]
+tearline = "tearline:main"
+
+[build-system]
+requires = ["uv_build>=0.12.2,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.0",
+    "pytest>=8.4.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.14.0",
+    "types-pyyaml>=6.0.12",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    # Deselected by default so a bare `pytest` cannot reach a real backend or a real index.
+    "-m", "not live",
+]
+markers = [
+    "live: runs against a real vector store or source system (slow, requires credentials)",
+]
+
+[tool.mypy]
+python_version = "3.14"
+files = ["src", "tests", "scripts"]
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+[tool.pydantic-mypy]
+init_typed = true
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
