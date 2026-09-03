@@ -1,0 +1,4 @@
+# Every chunk's entitlement matches its source document's ACL. The tool must find nothing.
+expected_findings: []
+chunks_examined: 8
+chunks_untraceable: 0

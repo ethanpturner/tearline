@@ -20,21 +20,37 @@ nobody runs it twice. It is a headline figure, not an appendix.
 
 ## 2. The truth-set rule
 
-**Nothing under `expected/` is supplied to the tool during a run** (DEC-009). Scenario layout:
+**Nothing under a variant's `expected-*` files is supplied to the tool during a run** (DEC-009).
+Scenario layout:
 
 ```
 benchmarks/<slug>/
-  corpus/          source documents and their ACLs, as the source system would report them
-  index/           the built index: chunk ids, entitlement metadata, ingestion timestamps
-  principals.yaml  the identities probes run as
-  probes.yaml      authored queries and which principals run them
-  expected/
-    expected-propagation.yaml   per-chunk: the correct entitlement, and any planted fault
-    expected-visibility.yaml    per (probe, principal): the chunk ids that should be returned
-    expected-clean.yaml         the negative set: retrieval that must NOT be flagged
-    expected-unverifiable.yaml  cases where the correct output is a refusal to conclude
+  shared/
+    documents.yaml          source documents and the ACLs the source system reports (ground truth)
+    principals.yaml         the identities probes run as
+    probes.yaml             authored queries, their principals, and `matches` (DEC-011)
+    entitlement-rule.yaml   how this source system combines tenant, roles and grants (DEC-012)
+  clean/
+    index.yaml              entitlements propagated correctly
+    expected-propagation.yaml
+    expected-visibility.yaml
+    expected-clean.yaml
+    expected-unverifiable.yaml
+  faulted/
+    index.yaml              identical but for one named fault
+    expected-*.yaml         the same four files for the faulted variant
   scenario.md
 ```
+
+**Revised 2026-09-03.** This layout replaces a flat `corpus/` + `index/` + `expected/` arrangement,
+after authoring the first scenario. Keeping the two indexes as sibling files makes a planted fault a
+one-line diff, which is both self-documenting and hard to get subtly wrong. `shared/` also gained
+`entitlement-rule.yaml`, which the original layout had no place for.
+
+`scripts/validate_fixtures.py` recomputes visibility from the fixture's own rule and compares it to
+the authored `expected-visibility.yaml`. It tests the scenario rather than the tool, so that a
+failing run means the tool is wrong rather than the answer key. Hand-authored set arithmetic is
+wrong more often than anyone admits.
 
 `expected-clean.yaml` and `expected-unverifiable.yaml` carry as much weight as the fault files.
 The first scores false positives. The second scores honesty — untraceable chunks, missing
@@ -77,6 +93,13 @@ completeness.
 The under-retrieval measurement needs an authored entitlement map to know what *should* have
 returned, so it is fully measurable against fixture corpora and only partially against a production
 index. That limit is stated in the output rather than papered over.
+
+A second limit follows from DEC-011. Because a fixture declares `matches` as given data, it cannot
+observe a retrieval system whose relevance behaviour changes under filtering — which is the very
+mechanism that produces post-filter truncation. In a fixture that case is *modelled* by authoring
+the truncated result, so a passing `post-filter-truncation` scenario shows the tool detects the
+shape of the failure, not that a given backend exhibits it. Establishing the latter requires a live
+run against that backend.
 
 ## 5. Backends
 

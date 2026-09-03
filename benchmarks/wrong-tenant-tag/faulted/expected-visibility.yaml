@@ -1,0 +1,33 @@
+# One mislabelled chunk, two different failures, in two different principals.
+#
+# This is the scenario's point. A tool that hunts only for leaks finds the first row and reports
+# the second as healthy -- the tenant whose own content was withheld sees no finding at all.
+
+visibility:
+  - probe: pr-001
+    principal: p-acme-eng
+    visible: [c-0012, c-0022, c-0032]
+    over_retrieved: [c-0022]
+    under_retrieved: []
+    outcome: over-retrieval
+    why: >-
+      c-0022 belongs to doc-002, a globex document. The index labels it acme, so an acme principal
+      receives another tenant's content. The retrieval layer behaved correctly; it enforced a tag
+      that was wrong.
+
+  - probe: pr-001
+    principal: p-globex-eng
+    visible: [c-0032]
+    over_retrieved: []
+    under_retrieved: [c-0022]
+    outcome: under-retrieval
+    why: >-
+      The same mislabelling withholds globex's own content from globex. The result set is not
+      empty, so nothing errors and nothing looks wrong; the answer is simply built on less than it
+      should have been (DEC-008).
+
+  # pr-002 does not touch c-0022 and is unchanged from the clean variant. Included so that a tool
+  # which degrades everything once it finds one fault is caught.
+  - { probe: pr-002, principal: p-acme-eng,   visible: [c-0011, c-0031, c-0032], over_retrieved: [], under_retrieved: [], outcome: clean }
+  - { probe: pr-002, principal: p-globex-eng, visible: [c-0031, c-0032],         over_retrieved: [], under_retrieved: [], outcome: clean }
+  - { probe: pr-002, principal: p-acme-fin,   visible: [c-0011, c-0031, c-0032], over_retrieved: [], under_retrieved: [], outcome: clean }

@@ -1,0 +1,7 @@
+# Empty. Every chunk traces, every timestamp is present, and both probes have two or more
+# principals -- so the fault is fully determinable and `unverifiable` is never the right answer
+# here.
+#
+# The scenarios where this file is non-empty are `narrowed-without-timestamps`,
+# `orphaned-chunk`, `boundary-crossing-chunk`, and `single-principal-probe`.
+expected_unverifiable: []

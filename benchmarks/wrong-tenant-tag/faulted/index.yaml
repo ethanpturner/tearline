@@ -1,0 +1,17 @@
+# The index with exactly one planted fault: chunk c-0022, which comes from doc-002 (tenant
+# `globex`), carries tenant `acme`. Every other field is identical to clean/index.yaml, so a diff
+# between the two files is precisely the fault.
+#
+# One mislabelled chunk produces BOTH failure modes, in different principals:
+#   p-acme-eng   now receives c-0022        -> over-retrieval (a cross-tenant leak)
+#   p-globex-eng no longer receives c-0022  -> under-retrieval (its own content withheld)
+# A tool that looks only for leaks finds half of this fault and reports the other half as healthy.
+chunks:
+  - { id: c-0011, source_document_id: doc-001, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [employee], principals: [] } }
+  - { id: c-0012, source_document_id: doc-001, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [employee], principals: [] } }
+  - { id: c-0021, source_document_id: doc-002, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [globex], roles: [employee], principals: [] } }
+  - { id: c-0022, source_document_id: doc-002, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [employee], principals: [] } }
+  - { id: c-0031, source_document_id: doc-003, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0032, source_document_id: doc-003, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0041, source_document_id: doc-004, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }
+  - { id: c-0042, source_document_id: doc-004, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }

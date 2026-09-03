@@ -1,0 +1,19 @@
+# Authored probes.
+#
+# `matches` is the set of chunks a relevance search returns for this query BEFORE any entitlement
+# filtering. The fixture supplies it as given data rather than deriving it from text, because
+# relevance is not what this tool tests -- and because deriving it would require chunk content in
+# the fixture, which DEC-002 forbids. See DEC-011.
+#
+# Every probe names at least two principals, or it does not run (DEC-007).
+
+probes:
+  - id: pr-001
+    query: expense and reimbursement policy
+    principals: [p-acme-eng, p-globex-eng]
+    matches: [c-0012, c-0022, c-0032, c-0041]
+
+  - id: pr-002
+    query: onboarding checklist for new staff
+    principals: [p-acme-eng, p-globex-eng, p-acme-fin]
+    matches: [c-0011, c-0031, c-0032]

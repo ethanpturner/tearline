@@ -1,0 +1,27 @@
+# Everything from the clean variant's negative set still applies: one planted fault must not
+# produce collateral findings.
+inherits: ../clean/expected-clean.yaml
+
+must_not_flag:
+  - case: "c-0021 is not flagged"
+    why: >-
+      The sibling chunk from the same source document is correctly tagged. A tool that widens a
+      finding to every chunk of an affected document reports one fault as two and misstates the
+      blast radius.
+
+  - case: "pr-002 is not flagged for any principal"
+    why: >-
+      The fault is not reachable from that probe. Degrading unrelated probes once a fault is found
+      turns one finding into a report nobody can triage.
+
+must_not_conclude:
+  - claim: "doc-002 is misconfigured in the source system"
+    why: >-
+      The source ACL is correct and the index is wrong (DEC-005). Pointing an operator at the
+      source system sends them to fix the one thing that is right.
+
+  - claim: "p-acme-eng is over-privileged"
+    why: >-
+      The principal's grants are correct. Nothing about this finding implicates the identity, and
+      an entitlement tool that reports identities rather than data will get identities narrowed for
+      no reason.

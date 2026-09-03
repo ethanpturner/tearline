@@ -9,7 +9,15 @@
 #   live       - requires a real backend; excluded from the default run
 
 version: 0.1
-scenarios: []
+scenarios:
+  - slug: wrong-tenant-tag
+    name: Chunk carries a tenant its source document does not
+    path: benchmarks/wrong-tenant-tag
+    status: recorded
+    category: propagation
+    # One mislabelled chunk, two failure modes: the acme principal receives globex content
+    # (over-retrieval) and the globex principal loses its own (under-retrieval). A leak-only tool
+    # finds half of this fault and reports the other half as healthy.
 
 # Intended first scenarios. Each is built from a correct corpus plus one named fault, and runs
 # twice -- once where the fault must be found, once against the clean version where nothing must be.

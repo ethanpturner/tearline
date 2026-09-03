@@ -1,0 +1,8 @@
+# Per (probe, principal): the chunk ids that should be returned. Derived from
+# shared/probes.yaml `matches` intersected with entitlement under shared/entitlement-rule.yaml.
+visibility:
+  - { probe: pr-001, principal: p-acme-eng,   visible: [c-0012, c-0032] }
+  - { probe: pr-001, principal: p-globex-eng, visible: [c-0022, c-0032] }
+  - { probe: pr-002, principal: p-acme-eng,   visible: [c-0011, c-0031, c-0032] }
+  - { probe: pr-002, principal: p-globex-eng, visible: [c-0031, c-0032] }
+  - { probe: pr-002, principal: p-acme-fin,   visible: [c-0011, c-0031, c-0032] }

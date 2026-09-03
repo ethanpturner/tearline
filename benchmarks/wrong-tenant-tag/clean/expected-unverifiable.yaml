@@ -1,0 +1,7 @@
+# Cases where a confident verdict would be wrong even though nothing is broken. Empty here by
+# construction: every chunk traces to a document, every timestamp is present, and every probe has
+# at least two principals.
+#
+# The emptiness is the assertion. A tool that emits `unverifiable` anywhere in the clean variant is
+# reporting an instrument limit that does not exist.
+expected_unverifiable: []

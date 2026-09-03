@@ -1,0 +1,15 @@
+# Exactly one propagation finding.
+chunks_examined: 8
+chunks_untraceable: 0
+
+expected_findings:
+  - chunk_id: c-0022
+    verdict: contradicted
+    cause: propagation-fault
+    expected: { state: stated, tenants: [globex], roles: [employee], principals: [] }
+    observed: { state: stated, tenants: [acme],   roles: [employee], principals: [] }
+    why_not_drift: >-
+      doc-002's `acl_modified_at` is 2026-01-11 and the chunk's `ingested_at` is 2026-02-01. The
+      ACL has not moved since ingestion, so the index never matched the source and this is a
+      pipeline fault rather than staleness (DEC-006). The two require different fixes and are
+      reported separately.

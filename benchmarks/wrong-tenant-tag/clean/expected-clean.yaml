@@ -1,0 +1,24 @@
+# The negative set: retrieval that is legitimate and must NOT be flagged. Scores false positives,
+# which is a headline number -- a verifier that flags everything has perfect recall and is useless.
+must_not_flag:
+  - case: "p-acme-eng receives c-0032 under both probes"
+    why: >-
+      doc-003 is stated for tenants acme and globex with role `everyone`. A tool that treats a
+      multi-tenant document as suspicious because it crosses a tenant boundary flags the single
+      most common legitimate pattern in a shared corpus.
+
+  - case: "p-acme-fin receives c-0011 under pr-002"
+    why: >-
+      The principal holds `employee` in addition to `finance`. A role check that requires an exact
+      set match rather than a non-empty intersection would deny this and report it as
+      under-retrieval.
+
+  - case: "p-globex-eng does not receive c-0012 or c-0041 under pr-001"
+    why: >-
+      Correct exclusion. Absence from a result set is only a finding when the principal was
+      entitled and the chunk matched (DEC-008); neither holds here.
+
+  - case: "c-0021 and c-0042 are never returned by any probe"
+    why: >-
+      They match no probe. A chunk being unreachable by the authored queries is not evidence of a
+      permission problem, and counting it as under-retrieval would make every probe set look broken.
