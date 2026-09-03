@@ -104,7 +104,18 @@ def test_the_engine_enforces_the_boundary(backend: PgVectorBackend) -> None:
         assert "acme" in stored[cid].entitlement.tenants
     for cid in globex_ids:
         assert "globex" in stored[cid].entitlement.tenants
-    assert set(acme_ids) & set(globex_ids) == set()
+
+    # The overlap is exactly the chunks stored for BOTH tenants -- the shared handbook. An earlier
+    # version asserted an empty intersection and CI caught it: a document shared across tenants is
+    # the commonest legitimate pattern in any shared corpus, and `wrong-tenant-tag`'s negative set
+    # explicitly forbids flagging it. The assertion had made the test demand the failure the
+    # scenario forbids.
+    shared = {
+        cid for cid, chunk in stored.items() if {"acme", "globex"} <= chunk.entitlement.tenants
+    }
+    assert set(acme_ids) & set(globex_ids) == shared & set(acme_ids) & set(globex_ids)
+    acme_only = {cid for cid, chunk in stored.items() if chunk.entitlement.tenants == {"acme"}}
+    assert acme_only & set(globex_ids) == set(), "globex received acme-only rows"
 
 
 def test_an_untagged_chunk_is_excluded_by_the_policy(backend: PgVectorBackend) -> None:
