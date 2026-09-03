@@ -34,6 +34,12 @@ assurance the tool exists to remove, and it produces it in the reassuring direct
 `whence`'s pin verifier, and this data model — but only the pin verifier is code. Counted
 accurately: **declared three times, implemented once.**
 
+**Settled 2026-09-03: no extraction.** `attestrun` owns the definition for its own output and the
+siblings keep theirs. A reader cloning this repository to see how retrieval entitlements are
+verified should not need a second one to run it; four projects independently declaring the same
+three verdicts is what demonstrates the distinction generalises; and a dependency from the verified
+to the verifier points the wrong way. Recorded in `attestrun`'s DEC-001.
+
 **Corrected 2026-09-03.** An earlier version of this entry called it the third hand-written
 implementation and said extraction into `attestrun` was due. That overstated the duplication by
 counting design documents as implementations, and the conclusion followed from the overstatement.

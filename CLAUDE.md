@@ -77,10 +77,10 @@ assertion. The others are [`whence`](https://github.com/ethanpturner/whence) (mo
 `attestrun` (evaluation attestation, not yet started).
 
 The three-valued verdict is **declared** in both data models and **implemented** in exactly one
-place, `whence/scripts/verify_pins.py`. Extraction into `attestrun` becomes due when it is
-implemented with behaviour in two places, which has not happened — neither project has product code.
-Two documents agreeing on three words is a shared vocabulary, not duplication. Do not build a
-commons package, and do not treat the shared vocabulary as debt.
+place, `whence/scripts/verify_pins.py`. **Settled: there is no extraction.** Each project declares its own; the agreement is documented
+rather than imported, because a reader cloning this repository should not need a second one to run
+it, and a dependency from the verified to the verifier points the wrong way. Do not build a commons
+package, and do not treat the shared vocabulary as debt.
 
 The claimed-versus-verified distinction is inherited from Trace's DEC-009. Cite that lineage where
 it is load-bearing; do not continue another project's decision numbering here.
