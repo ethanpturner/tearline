@@ -145,25 +145,31 @@ jobs:
       # FORCE is set, and the schema does set it -- but running as a separate role means the test
       # would still be meaningful if that line were ever removed, rather than passing because the
       # connection happened to be privileged.
+      # The suite connects as `reader`, never as `postgres`. A superuser bypasses row-level
+      # security entirely -- FORCE ROW LEVEL SECURITY binds the table OWNER, not a superuser -- so
+      # a superuser connection would observe perfect isolation from a policy that is not being
+      # applied at all. The first live run did exactly that and passed two tests it should have
+      # failed. The adapter now refuses such a connection; this creates a role it can accept.
       - name: create an unprivileged role
         run: |
           PGPASSWORD=tearline psql -h localhost -U postgres -d tearline -v ON_ERROR_STOP=1 <<'SQL'
           CREATE ROLE reader LOGIN PASSWORD 'reader';
-          GRANT USAGE ON SCHEMA public TO reader;
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO reader;
+          GRANT USAGE, CREATE ON SCHEMA public TO reader;
           SQL
 
       - name: live backend tests
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
-          TEARLINE_PG_DSN: postgresql://postgres:tearline@localhost:5432/tearline
+          TEARLINE_PG_DSN: postgresql://reader:reader@localhost:5432/tearline
+          TEARLINE_PG_ADMIN_DSN: postgresql://postgres:tearline@localhost:5432/tearline
         run: uv run pytest -m live -q
 
       # A green live suite would be worthless if the marker filter silently selected nothing.
       - name: the live suite actually ran
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
-          TEARLINE_PG_DSN: postgresql://postgres:tearline@localhost:5432/tearline
+          TEARLINE_PG_DSN: postgresql://reader:reader@localhost:5432/tearline
+          TEARLINE_PG_ADMIN_DSN: postgresql://postgres:tearline@localhost:5432/tearline
         run: |
           uv run pytest -m live -q 2>&1 | tee /tmp/live.txt || true
           # Distinguish "selected nothing" from "ran and failed". The previous version reported

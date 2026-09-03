@@ -65,24 +65,83 @@ CREATE POLICY chunk_tenant_isolation ON chunks
 )
 
 
+class BypassesRowSecurity(RuntimeError):
+    """The connected role is not subject to row-level security."""
+
+
 class PgVectorBackend:
     """Reads chunks and issues retrievals as a principal, letting the engine enforce."""
 
     enforcement_site = "engine"
 
-    def __init__(self, connection: Connection[Any]) -> None:
+    def __init__(
+        self,
+        connection: Connection[Any],
+        *,
+        admin_connection: Connection[Any] | None = None,
+    ) -> None:
+        """Two connections, because the two axes need opposite privileges.
+
+        `connection` issues retrievals as a principal and **must be subject to** row-level
+        security, or the differential axis observes an artifact of the connection rather than a
+        property of the policy.
+
+        `admin_connection` reads the whole index for the propagation axis and **must be able to
+        bypass** it, because comparing what the index holds against the source system means seeing
+        rows no principal can see -- which is exactly the population where a mislabelling hides.
+
+        Needing both is not an inconvenience of the adapter; it is what an audit of this backend
+        actually requires, and a single-connection design would silently do one of the two badly.
+        """
         self._connection = connection
+        self._admin = admin_connection
+        self.assert_subject_to_row_security()
+
+    def assert_subject_to_row_security(self) -> None:
+        """Refuse to verify through a role that bypasses the policy.
+
+        **Found by the first live CI run, which reported perfect isolation for a policy that was
+        not being applied.** A superuser bypasses row-level security entirely, and
+        `FORCE ROW LEVEL SECURITY` does not change that -- FORCE binds the table *owner*, not a
+        superuser. So a connection as `postgres` sees every row, every retrieval looks correctly
+        filtered because the caller only asked for their own tenant's data anyway, and the tool
+        reports that the boundary holds.
+
+        That is the worst failure this adapter could have: not a wrong answer, but a confident
+        right-looking answer produced by never testing the thing under test. The check costs one
+        query and is on by default; `allow_bypass` exists only for the propagation axis, which
+        reads with row security deliberately off.
+        """
+        with self._connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user"
+            )
+            row = cursor.fetchone()
+        self._connection.rollback()
+        if row is None:
+            raise BypassesRowSecurity(
+                f"cannot determine the privileges of {self._connection.info.user!r}"
+            )
+        if row[0]:
+            raise BypassesRowSecurity(
+                "the connected role bypasses row-level security (superuser or BYPASSRLS), so any "
+                "isolation this adapter appears to observe would be an artifact of the connection "
+                "rather than a property of the policy. Connect as an unprivileged role."
+            )
 
     # -- setup ---------------------------------------------------------------------------
 
     def apply_schema(self) -> None:
-        with self._connection.cursor() as cursor:
+        """Requires the admin connection: CREATE EXTENSION is privileged."""
+        connection = self._admin or self._connection
+        with connection.cursor() as cursor:
             cursor.execute(SCHEMA)
-        self._connection.commit()
+        connection.commit()
 
     def load(self, chunks: Sequence[tuple[Chunk, Sequence[float]]]) -> None:
-        """Insert chunks. Runs as the owner with the policy temporarily bypassed for writes only."""
-        with self._connection.cursor() as cursor:
+        """Insert chunks through the admin connection; the policy governs SELECT, not writes."""
+        connection = self._admin or self._connection
+        with connection.cursor() as cursor:
             cursor.execute("TRUNCATE chunks")
             for chunk, vector in chunks:
                 cursor.execute(
@@ -102,25 +161,32 @@ class PgVectorBackend:
                         str(list(vector)),
                     ),
                 )
-        self._connection.commit()
+        connection.commit()
 
     # -- the Backend protocol ------------------------------------------------------------
 
     def chunks(self) -> list[Chunk]:
-        """Every chunk as stored.
+        """Every chunk as stored, read through the admin connection.
 
-        Read with the policy bypassed: the propagation axis compares what the index *holds* against
-        the source system, and a policy-filtered read would only ever show rows some principal can
-        already see -- which is precisely the population where a mislabelling is invisible.
+        The propagation axis compares what the index *holds* against the source system, and a
+        policy-filtered read would only ever show rows some principal can already see -- precisely
+        the population where a mislabelling is invisible.
         """
-        with self._connection.cursor() as cursor:
+        if self._admin is None:
+            raise BypassesRowSecurity(
+                "reading every chunk requires a connection that can bypass row-level security, and "
+                "none was supplied. The propagation axis cannot run through a principal's "
+                "connection: it would only ever see rows that principal is already permitted, which "
+                "is the one population where a mislabelled chunk cannot be detected."
+            )
+        with self._admin.cursor() as cursor:
             cursor.execute("SET LOCAL row_security = off")
             cursor.execute(
                 "SELECT id, source_document_ids, ingested_at, entitlement_state, tenants, roles,"
                 " principals FROM chunks ORDER BY id"
             )
             rows = cursor.fetchall()
-        self._connection.rollback()
+        self._admin.rollback()
         return [
             Chunk(
                 id=row[0],

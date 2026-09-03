@@ -23,21 +23,55 @@ from tearline.verify import check_propagation
 
 pytestmark = pytest.mark.live
 
-DSN = os.environ.get("TEARLINE_PG_DSN")
+DSN = os.environ.get("TEARLINE_PG_DSN")  # unprivileged: subject to the policy
+ADMIN_DSN = os.environ.get("TEARLINE_PG_ADMIN_DSN")  # privileged: may bypass it
 DIMENSIONS = 16
 ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture(scope="module")
 def backend() -> Iterator[PgVectorBackend]:
+    if not (DSN and ADMIN_DSN):
+        pytest.skip("TEARLINE_PG_DSN and TEARLINE_PG_ADMIN_DSN are not both set")
+    import psycopg
+
+    with psycopg.connect(DSN) as connection, psycopg.connect(ADMIN_DSN) as admin:
+        adapter = PgVectorBackend(connection, admin_connection=admin)
+        adapter.apply_schema()
+        with admin.cursor() as cursor:
+            cursor.execute("GRANT SELECT ON chunks TO reader")
+        admin.commit()
+        yield adapter
+
+
+def test_the_adapter_refuses_a_role_that_bypasses_the_policy() -> None:
+    """Found by the first live CI run, which reported perfect isolation from a policy that was
+    never applied: a superuser bypasses row-level security, and FORCE binds the table owner rather
+    than a superuser. A verification tool connected that way produces a confident right-looking
+    answer by never testing the thing under test."""
+    if not ADMIN_DSN:
+        pytest.skip("TEARLINE_PG_ADMIN_DSN is not set")
+    import psycopg
+
+    from tearline.backends.pgvector import BypassesRowSecurity
+
+    with psycopg.connect(ADMIN_DSN) as superuser, pytest.raises(BypassesRowSecurity):
+        PgVectorBackend(superuser)
+
+
+def test_the_propagation_axis_refuses_a_principals_connection() -> None:
+    """Reading every chunk through a principal's connection would only ever show rows that
+    principal may already see -- the one population where a mislabelled chunk cannot be found."""
     if not DSN:
         pytest.skip("TEARLINE_PG_DSN is not set")
     import psycopg
 
+    from tearline.backends.pgvector import BypassesRowSecurity
+
     with psycopg.connect(DSN) as connection:
         adapter = PgVectorBackend(connection)
-        adapter.apply_schema()
-        yield adapter
+        with pytest.raises(BypassesRowSecurity):
+            adapter.chunks()
 
 
 def _load(adapter: PgVectorBackend, variant: str) -> None:
