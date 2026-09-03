@@ -11,6 +11,10 @@ boundary and the residual risk is *completeness*. Qdrant filters on the payload 
 so the boundary lives entirely in application code — `retrieve_unfiltered` demonstrates it by
 returning another tenant's points from the same query with the clause omitted.
 
+Ground truth comes from a real source system too: `sources.FilesystemSource` reads document ACLs
+from POSIX ownership and mode bits, which makes drift observable with real timestamps — `chmod`
+moves `st_ctime`, and that is the signal separating a stale index from a broken pipeline.
+
 **Neither catches a propagation fault.** Both serve a mislabelled chunk faithfully and quickly to
 the wrong tenant while every control behaves correctly, which is the case for this tool and is now
 shown against real stores rather than argued from a fixture.
