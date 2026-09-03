@@ -140,9 +140,14 @@ class PgVectorBackend:
         """Chunk ids the engine returns for this principal. Ids only, never content (DEC-002)."""
         tenant = request.principal.tenant or ""
         with self._connection.cursor() as cursor:
-            # SET LOCAL scopes the identity to this transaction, so a pooled connection cannot
+            # `set_config(..., is_local => true)` is the parameterised equivalent of SET LOCAL:
+            # PostgreSQL does not accept a placeholder in a SET statement, and interpolating the
+            # tenant into the SQL string would put caller-supplied text into a statement, which is
+            # not a trade worth making in a tool that exists to check access boundaries.
+            #
+            # `is_local` scopes the identity to this transaction, so a pooled connection cannot
             # carry one principal's identity into another principal's query.
-            cursor.execute(f"SET LOCAL {PRINCIPAL_SETTING} = %s", (tenant,))
+            cursor.execute("SELECT set_config(%s, %s, true)", (PRINCIPAL_SETTING, tenant))
             cursor.execute(
                 "SELECT id FROM chunks ORDER BY embedding <-> %s::vector LIMIT %s",
                 (str(list(request.vector)), request.limit),

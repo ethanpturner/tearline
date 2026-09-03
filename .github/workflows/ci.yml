@@ -165,7 +165,13 @@ jobs:
         env:
           TEARLINE_PG_DSN: postgresql://postgres:tearline@localhost:5432/tearline
         run: |
-          uv run pytest -m live -q 2>&1 | tee /tmp/live.txt
+          uv run pytest -m live -q 2>&1 | tee /tmp/live.txt || true
+          # Distinguish "selected nothing" from "ran and failed". The previous version reported
+          # the first for the second, which sent the reader looking at the marker filter when the
+          # actual problem was a SQL error.
+          if grep -qE '[0-9]+ failed' /tmp/live.txt; then
+            echo "::error::the live suite ran and failed; see the step above"; exit 1
+          fi
           grep -qE '[1-9][0-9]* passed' /tmp/live.txt \
             || { echo "::error::the live suite selected no tests"; exit 1; }
           grep -q 'skipped' /tmp/live.txt \
