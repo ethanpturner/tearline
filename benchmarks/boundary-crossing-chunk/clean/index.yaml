@@ -1,0 +1,8 @@
+# c-0051 draws on both documents and is tagged with the INTERSECTION of their audiences: acme only.
+# That is the safe choice -- it discloses nothing beyond what every source permits -- and it is
+# still not verifiable as *correct*, because the source system never stated what a merged chunk
+# should inherit (DEC-015).
+filter: rule
+chunks:
+  - { id: c-0051, source_document_ids: [doc-005, doc-006], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] } }
+  - { id: c-0052, source_document_ids: [doc-005], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }

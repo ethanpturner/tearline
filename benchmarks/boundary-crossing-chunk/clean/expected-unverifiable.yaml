@@ -1,0 +1,12 @@
+# The first non-empty file of its kind in this repository.
+expected_unverifiable:
+  - subject: chunk c-0051
+    verdict: unverifiable
+    why: >-
+      The correct entitlement for a chunk drawn from documents with different audiences is a policy
+      question the source system has not answered. The tool reports what it can establish -- the
+      sources, their divergence, the safe bound, and that the tag satisfies it -- and declines to
+      call the tag correct.
+    still_established: >-
+      That the tag discloses nothing beyond what every source permits. Abstention here is narrow and
+      says exactly what it covers; it is not a refusal to analyse.

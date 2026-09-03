@@ -327,3 +327,64 @@ assertion.
 **Tradeoffs.** A real system whose enforcement matches no implemented model cannot be represented
 until a model is added. That friction is intended: it forces the behaviour to be described before it
 is depended on.
+
+---
+
+## DEC-014 — A chunk records all of its source documents
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Decision.** `Chunk.source_document_ids` is a collection. A chunk drawn from several documents
+records all of them; one drawn from none records an empty collection and is untraceable.
+
+**Why.** The field was singular and could not represent a chunk drawn from more than one document —
+ordinary output for any pipeline that merges short sections, deduplicates near-identical passages,
+or windows across a document boundary. Authoring `boundary-crossing-chunk` made it inexpressible.
+
+A singular field also forces a lossy choice at ingestion: record one source and discard the rest,
+which destroys exactly the information needed to compute what a merged chunk may disclose.
+
+**Tradeoffs.** Every consumer must handle the multi-source case, and the interesting rules — the
+safe bound in DEC-015 — only exist because of it. That is the cost of representing what pipelines
+actually produce.
+
+---
+
+## DEC-015 — The safe bound, and when `unverifiable` is permitted
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Decision.** For a chunk drawn from several documents:
+
+- A principal may see it only if entitled by **all** its sources. That intersection is the **safe
+  bound**.
+- A tag that **exceeds** the safe bound is `contradicted`. Determinable, and a finding.
+- A tag that **satisfies** the safe bound is `unverifiable`, reported with its sources, their
+  divergence, the bound, and an explicit statement of what is not being claimed.
+- `unverifiable` is **not available** for a tag that exceeds the safe bound.
+
+**Why.** Chunking creates objects the source system has never had an opinion about. Where a chunk's
+sources disagree, the correct entitlement is a policy question the organisation must answer and the
+source system has not recorded — it might reasonably be the intersection, the more permissive
+parent, or a refusal to merge at all. A tool that picks one is inventing policy and reporting it as
+a finding.
+
+But indeterminacy about the right answer is not indeterminacy about every wrong one. A chunk
+contains material from all of its sources, so serving it to a principal that any source excludes
+discloses that source's material to them. That is determinable without settling the policy question.
+
+**The last clause is the load-bearing one.** Without it, a tool could abstain whenever sources
+diverge — including on a tag granting a tenant access to material no source grants it — and the
+abstention would look principled. Tying abstention to the safe bound keeps `unverifiable` narrow
+enough to be honest.
+
+**Alternatives considered.** Defaulting to the intersection and reporting anything else as a fault.
+Rejected: it is the safe policy and it is still a policy, and a tool that enforces an unstated one
+will be wrong about organisations that chose differently — while reporting that wrongness as
+findings, which DEC-012 rejects for the same reason.
+
+**Open questions.** Whether a chunk whose sources agree should be reported at all when it has
+several of them. Currently it is treated as an ordinary determinate case, since the sources produce
+one answer, and nothing in the fixtures yet tests that.

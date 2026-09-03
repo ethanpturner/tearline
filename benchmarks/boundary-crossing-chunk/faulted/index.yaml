@@ -1,0 +1,9 @@
+# c-0051 is tagged with the UNION of its sources' audiences instead of the intersection. The chunk
+# contains material from doc-006, which globex may not read, and the tag admits globex.
+#
+# This is determinable and is a finding. `unverifiable` is forbidden here: the tool cannot say what
+# the correct entitlement is, and it can say with certainty that this one is not it (DEC-015).
+filter: rule
+chunks:
+  - { id: c-0051, source_document_ids: [doc-005, doc-006], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0052, source_document_ids: [doc-005], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }

@@ -61,7 +61,7 @@ What a document or chunk requires of a reader.
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `id` | str | yes | Index-assigned. |
-| `source_document_id` | str \| None | no | `None` means the chunk cannot be traced to a document — `unverifiable`, never a pass. |
+| `source_document_ids` | tuple[str, ...] | yes | All documents the chunk draws on (DEC-014). Empty means untraceable — `unverifiable`, never a pass. More than one triggers the safe-bound rule (DEC-015). |
 | `entitlement` | `Entitlement` | yes | The claim held in the index. |
 | `ingested_at` | datetime \| None | no | `None` makes drift `unverifiable` (DEC-006). |
 
@@ -116,7 +116,9 @@ record absence as a grant (DEC-003). A genuinely public document is `stated` wit
 system's own public marker in `roles`.
 
 **`MismatchCause`** — closed. `propagation-fault` (never matched), `drift` (source ACL changed after
-ingestion), `unverifiable` (timestamps unavailable to distinguish the two) (DEC-006).
+ingestion), `unverifiable` (timestamps unavailable to distinguish the two) (DEC-006),
+`indeterminate-source` (sources diverge and the tag satisfies the safe bound),
+`exceeds-safe-bound` (sources diverge and the tag grants beyond what all of them permit) (DEC-015).
 
 **`ProbeOutcome`** — closed. `clean`, `over-retrieval`, `under-retrieval`, `both`, `not-run`.
 
@@ -125,8 +127,11 @@ ingestion), `unverifiable` (timestamps unavailable to distinguish the two) (DEC-
 - **No field holds chunk text, and none may be added** (DEC-002). A finding names identifiers.
 - **An empty `tenants` set is not "all tenants".** Where a system genuinely grants everyone, that is
   recorded as a stated role, not as an absence.
-- **A chunk with `source_document_id = None` is `unverifiable`.** It is never counted as clean, and
+- **A chunk with no source documents is `unverifiable`.** It is never counted as clean, and
   `chunks_untraceable` is reported alongside the findings so that a low finding count cannot be read
   as good news without also reading how much was checkable.
+- **A multi-source chunk is entitled to a principal only if all of its sources are** (DEC-015). The
+  intersection is the safe bound; a tag exceeding it is `contradicted`, and `unverifiable` is
+  unavailable in that case.
 - **A skipped probe never contributes a passing result** (DEC-007). `probes_skipped` and `partial`
   exist so that skipping is visible in the report rather than only in logs.

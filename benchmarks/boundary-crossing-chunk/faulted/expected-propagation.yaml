@@ -1,0 +1,25 @@
+chunks_examined: 2
+chunks_untraceable: 0
+
+expected_findings:
+  - chunk_id: c-0051
+    verdict: contradicted
+    cause: exceeds-safe-bound
+    sources: [doc-005, doc-006]
+    observed: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] }
+    safe_bound: { tenants: [acme], roles: [everyone] }
+    satisfies_safe_bound: false
+    why: >-
+      The tag is the union of its sources' audiences. The chunk contains material from doc-006,
+      which globex may not read, and the tag admits globex. The correct entitlement is still
+      undetermined; that this one is wrong is not.
+
+forbidden_verdicts:
+  - chunk_id: c-0051
+    verdict: unverifiable
+    why: >-
+      **The anti-abstention rule, and the reason this scenario exists.** `unverifiable` is
+      available only when the tag satisfies the safe bound. A tool permitted to abstain whenever
+      sources disagree would abstain here -- on a tag that grants a tenant access to material no
+      source grants it -- and the abstention would look principled. Indeterminacy about the right
+      answer is not indeterminacy about every wrong one (DEC-015).

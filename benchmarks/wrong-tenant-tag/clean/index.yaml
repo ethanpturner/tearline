@@ -1,11 +1,11 @@
 # The index as built from shared/documents.yaml with entitlements propagated correctly.
 # This is the clean twin: the tool must find nothing here (DEC-009).
 chunks:
-  - { id: c-0011, source_document_id: doc-001, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [employee], principals: [] } }
-  - { id: c-0012, source_document_id: doc-001, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [employee], principals: [] } }
-  - { id: c-0021, source_document_id: doc-002, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [globex], roles: [employee], principals: [] } }
-  - { id: c-0022, source_document_id: doc-002, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [globex], roles: [employee], principals: [] } }
-  - { id: c-0031, source_document_id: doc-003, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
-  - { id: c-0032, source_document_id: doc-003, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
-  - { id: c-0041, source_document_id: doc-004, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }
-  - { id: c-0042, source_document_id: doc-004, ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }
+  - { id: c-0011, source_document_ids: [doc-001], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [employee], principals: [] } }
+  - { id: c-0012, source_document_ids: [doc-001], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [employee], principals: [] } }
+  - { id: c-0021, source_document_ids: [doc-002], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [globex], roles: [employee], principals: [] } }
+  - { id: c-0022, source_document_ids: [doc-002], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [globex], roles: [employee], principals: [] } }
+  - { id: c-0031, source_document_ids: [doc-003], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0032, source_document_ids: [doc-003], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0041, source_document_ids: [doc-004], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }
+  - { id: c-0042, source_document_ids: [doc-004], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }

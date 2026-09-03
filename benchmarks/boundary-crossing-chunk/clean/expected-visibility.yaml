@@ -1,0 +1,4 @@
+# c-0051 is tagged with the intersection, so enforcement and the safe bound agree.
+visibility:
+  - { probe: pr-004, principal: p-acme-eng,   visible: [c-0051, c-0052], over_retrieved: [], under_retrieved: [], outcome: clean }
+  - { probe: pr-004, principal: p-globex-eng, visible: [c-0052],         over_retrieved: [], under_retrieved: [], outcome: clean }

@@ -1,0 +1,14 @@
+# Two documents with different audiences. The chunking pipeline produced one chunk drawn from both,
+# which is an object the source system has never had an opinion about.
+system: fixture-kb
+
+documents:
+  - id: doc-005
+    label: Shared release notes
+    acl_modified_at: 2026-01-14T09:00:00Z
+    entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] }
+
+  - id: doc-006
+    label: Acme-only migration notice
+    acl_modified_at: 2026-01-15T09:00:00Z
+    entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] }

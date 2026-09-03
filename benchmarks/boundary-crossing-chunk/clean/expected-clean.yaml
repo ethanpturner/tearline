@@ -1,0 +1,17 @@
+must_not_flag:
+  - case: "c-0052 is visible to both principals"
+    why: >-
+      Single-source, correctly tagged, shared with both tenants. A tool made cautious by the
+      presence of a multi-source chunk elsewhere in the document set must not widen its suspicion
+      to well-determined neighbours.
+
+  - case: "c-0051 is withheld from p-globex-eng"
+    why: >-
+      Correct under the safe bound. Reporting this as under-retrieval would demand the tool assert
+      that globex *should* see the chunk -- precisely the policy call it just declined to make.
+
+must_not_conclude:
+  - claim: "c-0051 is misconfigured"
+    why: >-
+      Nothing establishes that. The tag is safe and unverified, which is a different statement, and
+      an operator sent to fix it has nothing to fix.

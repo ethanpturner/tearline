@@ -1,0 +1,13 @@
+visibility:
+  - { probe: pr-004, principal: p-acme-eng, visible: [c-0051, c-0052], over_retrieved: [], under_retrieved: [], outcome: clean }
+  - probe: pr-004
+    principal: p-globex-eng
+    visible: [c-0051, c-0052]
+    over_retrieved: [c-0051]
+    under_retrieved: []
+    outcome: over-retrieval
+    why: >-
+      c-0051 contains material from doc-006, which globex may not read. The union tag admits globex
+      anyway. Note this is determinable even though the chunk's *correct* entitlement is not: the
+      tool cannot say what the tag should be, and can say with certainty that it is not this
+      (DEC-015).

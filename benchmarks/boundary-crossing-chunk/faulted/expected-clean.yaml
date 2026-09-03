@@ -1,0 +1,12 @@
+inherits: ../clean/expected-clean.yaml
+
+must_not_conclude:
+  - claim: "the chunking pipeline is broken"
+    why: >-
+      Drawing a chunk from two documents is not itself a fault; the clean variant does it and is
+      safe. What is wrong is the entitlement derived for the result.
+
+  - claim: "doc-005 and doc-006 have inconsistent ACLs"
+    why: >-
+      They are two documents with different audiences, which is ordinary. The inconsistency is
+      manufactured by chunking, not present in the source.

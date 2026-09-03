@@ -1,0 +1,24 @@
+chunks_examined: 2
+chunks_untraceable: 0
+
+expected_findings:
+  - chunk_id: c-0051
+    verdict: unverifiable
+    cause: indeterminate-source
+    sources: [doc-005, doc-006]
+    observed: { state: stated, tenants: [acme], roles: [everyone], principals: [] }
+    safe_bound: { tenants: [acme], roles: [everyone] }
+    satisfies_safe_bound: true
+    why: >-
+      The chunk draws on two documents with different audiences. The source system assigns ACLs to
+      documents and has never had an opinion about an object made from several of them, so there is
+      no stated answer to compare the tag against. The tag equals the intersection of its sources,
+      which discloses nothing beyond what every source permits.
+    what_is_not_being_claimed: >-
+      That the tag is correct. The organisation might legitimately decide a merged chunk inherits
+      the more permissive parent, or that merging across differing ACLs should be refused at
+      ingestion. That is a policy the source system has not recorded, and the tool does not invent
+      it (DEC-015).
+
+  # c-0051 is reported even though nothing is wrong with it. A chunk whose entitlement cannot be
+  # verified is not silently treated as fine; it appears in the report with the reason.

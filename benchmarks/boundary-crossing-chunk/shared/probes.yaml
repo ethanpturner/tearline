@@ -1,0 +1,5 @@
+probes:
+  - id: pr-004
+    query: release notes and migration steps
+    principals: [p-acme-eng, p-globex-eng]
+    matches: [c-0051, c-0052]

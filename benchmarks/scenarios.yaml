@@ -63,3 +63,13 @@ scenarios:
 # - slug: single-principal-probe
 #   measures: DEC-007. Only one identity available. The probe does not run and the report says so;
 #             "no leak detected" is the forbidden output.
+
+  - slug: boundary-crossing-chunk
+    name: Chunk drawn from documents with different audiences
+    path: benchmarks/boundary-crossing-chunk
+    status: recorded
+    category: indeterminate
+    # The scenario where the source system does not determine the answer. Chunking created an
+    # object the source has never had an opinion about. The tool abstains on whether the safe tag
+    # is *correct* and still catches a tag that is unsafe -- so `unverifiable` keeps its teeth and
+    # is forbidden in the faulted variant.

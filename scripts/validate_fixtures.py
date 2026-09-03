@@ -98,8 +98,12 @@ def check_variant(scenario: Path, variant: str) -> list[str]:
             truth, visible = set(), set()
             for cid in matched:
                 chunk = chunks[cid]
-                doc = documents.get(chunk.get("source_document_id") or "")
-                if doc and entitled_by_rule(doc["entitlement"], principal):
+                sources = [documents[d] for d in chunk.get("source_document_ids") or [] if d in documents]
+                # A chunk drawn from several documents contains material from every one of them,
+                # so a principal may see it only if entitled by ALL of its sources (DEC-015). With
+                # a single source this is the ordinary case. With none, the chunk is untraceable
+                # and contributes to no truth set.
+                if sources and all(entitled_by_rule(d["entitlement"], principal) for d in sources):
                     truth.add(cid)
                 if enforce(chunk["entitlement"], principal):
                     visible.add(cid)

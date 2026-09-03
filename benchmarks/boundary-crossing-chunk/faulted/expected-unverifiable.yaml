@@ -1,0 +1,6 @@
+# Deliberately empty, and the emptiness is the assertion.
+#
+# The sources diverge in this variant exactly as they do in ../clean/, so a tool that keys
+# abstention on divergence alone would emit `unverifiable` here. It must not: the tag exceeds the
+# safe bound, which is determinable, so the verdict is `contradicted` (DEC-015).
+expected_unverifiable: []
