@@ -1,0 +1,9 @@
+# c-0092 records no source document. Its entitlement may be right; nothing available establishes
+# that, so the chunk is `unverifiable` and is counted in chunks_untraceable (DEC-001).
+#
+# The tag is left correct on purpose. A scenario where the orphan is ALSO mistagged would let a
+# tool pass by finding the tag error and never noticing it could not check it.
+filter: rule
+chunks:
+  - { id: c-0091, source_document_ids: [doc-009], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] } }
+  - { id: c-0092, source_document_ids: [], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] } }

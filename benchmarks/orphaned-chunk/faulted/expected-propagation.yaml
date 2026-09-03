@@ -1,0 +1,14 @@
+chunks_examined: 2
+chunks_untraceable: 1     # reported alongside findings so a low count cannot read as good news
+
+expected_findings:
+  - chunk_id: c-0092
+    verdict: unverifiable
+    cause: undetermined
+    expected: null
+    observed: { state: stated, tenants: [acme], roles: [everyone], principals: [] }
+    why: >-
+      The chunk records no source document, so there is no ACL to compare its tag against. The tag
+      may well be correct -- it happens to match its sibling -- and nothing available establishes
+      that. `unverifiable`, never a pass, and never `contradicted` either: no evidence says the tag
+      is wrong.

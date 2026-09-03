@@ -427,3 +427,109 @@ tell which axis a word is on will eventually not bother.
 
 **Tradeoffs.** Two words for a similar idea. Acceptable — they are similar ideas about different
 things, which is exactly when distinct words earn their cost.
+
+---
+
+## DEC-017 — Backend: PostgreSQL with `pgvector` and row-level security
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Trust model: the engine enforces.** A row-level security policy is evaluated by the database, so
+an application that forgets its `WHERE` clause still cannot read another tenant's rows. The boundary
+does not depend on the retrieval code being correct.
+
+**Decision.** Supported as the first backend, specifically because it is the configuration where
+the tool's job is *hardest to justify* — if the engine holds the boundary, what is left to verify?
+
+**What is still verifiable, and it is most of the point.** Engine enforcement guarantees that the
+policy is applied. It guarantees nothing about whether the policy expresses the source system's
+ACL. Propagation faults and drift (DEC-006) live entirely in how a chunk's tenant column was
+populated at ingestion, which RLS never inspects — it enforces the value faithfully, exactly as
+`wrong-tenant-tag` describes.
+
+**The failure mode this backend contributes.** With an approximate index, entitlement filtering is
+applied *after* the ANN scan unless a supporting index lets the planner push it down. A highly
+selective policy — a tenant entitled to a small fraction of rows — can therefore return fewer
+matches than exist, or none, while matching rows are present.
+
+**Confidentiality holds and completeness silently breaks**, which is precisely DEC-008's
+under-retrieval, occurring natively rather than as a bug. It is the strongest available argument
+that a leak-only verifier is insufficient: on this backend, the most likely defect discloses nothing
+and is invisible to any tool measuring only over-retrieval.
+
+**What the tool cannot verify here.** That the RLS policy itself matches organisational intent. The
+tool compares the index against the source system; whether the source system reflects what the
+organisation meant is a different audit (`project-scope.md` §7).
+
+---
+
+## DEC-018 — Backend: Qdrant, where isolation is application-supplied
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Trust model: the application enforces.** Multi-tenancy is a payload field — conventionally
+`tenant_id` — with a tenant index, or per-tenant sharding. The store filters on the value it is
+given and has no notion of who is asking.
+
+**Decision.** Supported as the second backend, chosen for contrast with DEC-017 rather than for
+popularity. Verifying both means the tool cannot assume the engine is on the operator's side.
+
+**The specific gap.** Qdrant's JWT support (RBAC, GA since v1.9) restricts *which collection* a key
+may touch and whether it may write. It does not bind a tenant: nothing injects `tenant_id == <claim>`
+into a query. Qdrant's own multi-tenancy guidance states that ensuring a caller sees only their own
+tenant relies on the application layer, and
+[qdrant#8015](https://github.com/qdrant/qdrant/issues/8015) — *"Automatic Tenant-ID Injection via
+JWT Claims or Tenant-Specific API Keys"*, open since 2026-01-30 — is a request for the binding that
+does not exist.
+
+So a claim that "Qdrant enforces tenant isolation via JWT" is inaccurate as commonly stated, and the
+documentation says so. The boundary lives entirely in code the store never sees.
+
+**What that changes for verification.** Everything DEC-017 leaves to the engine is here in scope. A
+query issued without the tenant filter returns cross-tenant results correctly and quickly, so
+differential probing (DEC-007) carries the weight that RLS carries on Postgres — it is the only
+thing establishing that the boundary is applied at all, rather than merely available.
+
+**The one thing that gets better.** Qdrant's filterable HNSW keeps the filter inside the graph
+traversal, which mitigates DEC-017's post-filter truncation architecturally rather than eliminating
+it. So the two backends fail in opposite directions: the engine-enforced one is prone to
+under-retrieval, and the application-enforced one to over-retrieval. Reporting per backend rather
+than merged (`evaluation-plan.md` §5) is what keeps that visible — a merged score would hide the
+difference an operator is choosing between.
+
+**Not yet decided.** Whether a third backend is worth adding. Two are enough to prevent a
+premature abstraction (DEC-010), and a third should be argued for by a trust model neither of these
+covers rather than by market share.
+
+---
+
+## DEC-019 — Retrieval is a bounded candidate set, filtered afterwards
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Decision.** A fixture variant may declare `ann_limit`: the number of candidates the approximate
+search returns before entitlement filtering is applied. Filtering operates on that bounded set,
+never on the whole corpus. Truth — what a principal is entitled to — is computed over the probe's
+full relevance set regardless, so a chunk lost to the limit registers as under-retrieval.
+
+**Why.** DEC-008 asserts that under-retrieval is a finding, and until now the fixture format could
+not produce one without a mistagged chunk. That was a gap: the mechanism DEC-008 describes is
+ordering and truncation, not mislabelling. Post-filter truncation is a property of how a search is
+executed, and modelling it needs the candidate bound to be expressible.
+
+It also makes DEC-017's residual risk testable. On an engine-enforced backend, confidentiality is
+held by the database and the realistic defect is exactly this: a selective policy returning fewer
+matches than exist. Without `ann_limit` the only backend whose main failure mode the fixtures could
+represent was the application-enforced one.
+
+**What it does not model.** The reason a chunk ranks where it does. Ordering is authored, like
+`matches` itself (DEC-011), so the fixture demonstrates that the tool detects truncation — not that
+a given backend or embedding produces it at a given k. That distinction is stated in the evaluation
+plan and belongs in any claim made from these results.
+
+**Tradeoffs.** Another authored dial, and dials can be tuned until a scenario says what its author
+wants. Mitigated the same way as DEC-013's filters: `ann_limit` is one integer with one meaning,
+checked by `validate_fixtures.py`, rather than free-form control over the result set.

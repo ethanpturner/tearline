@@ -1,0 +1,7 @@
+# `matches` is in relevance order. The globex-entitled chunk ranks last, which is what makes it
+# reachable only if the candidate set is large enough.
+probes:
+  - id: pr-007
+    query: failover runbook steps
+    principals: [p-acme-eng, p-globex-eng]
+    matches: [c-0111, c-0112, c-0113, c-0101]

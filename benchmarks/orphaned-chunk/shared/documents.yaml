@@ -1,0 +1,6 @@
+system: fixture-kb
+documents:
+  - id: doc-009
+    label: Acme incident review
+    acl_modified_at: 2026-01-16T09:00:00Z
+    entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] }

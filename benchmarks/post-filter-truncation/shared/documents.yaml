@@ -1,0 +1,10 @@
+system: fixture-kb
+documents:
+  - id: doc-010
+    label: Globex runbook
+    acl_modified_at: 2026-01-17T09:00:00Z
+    entitlement: { state: stated, tenants: [globex], roles: [everyone], principals: [] }
+  - id: doc-011
+    label: Acme runbook
+    acl_modified_at: 2026-01-17T09:00:00Z
+    entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] }

@@ -1,0 +1,9 @@
+must_not_conclude:
+  - claim: "c-0092 is incorrectly entitled"
+    why: >-
+      Nothing establishes that. Its tag is in fact identical to its correctly-traced sibling. An
+      untraceable chunk is a gap in the evidence, not evidence of a fault.
+  - claim: "the index is 50% verified"
+    why: >-
+      Two chunks, one checkable. Reporting coverage as a pass rate invites reading an unverifiable
+      chunk as half-good. `chunks_untraceable` is a separate count for that reason.

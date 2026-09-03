@@ -87,16 +87,34 @@ def check_variant(scenario: Path, variant: str) -> list[str]:
         return [f"{variant}: unknown filter {filter_name!r}; known: {sorted(FILTERS)}"]
     enforce = FILTERS[filter_name]
 
-    expected = load(scenario / variant / "expected-visibility.yaml")["visibility"]
+    ann_limit = index.get("ann_limit")
+
+    expected_doc = load(scenario / variant / "expected-visibility.yaml")
+    expected = expected_doc["visibility"]
     problems: list[str] = []
     seen: set[tuple[str, str]] = set()
 
+    # DEC-007: a probe naming fewer than two identities cannot demonstrate isolation, so it does
+    # not run. It must be declared skipped rather than silently contributing a passing row.
+    skipped = {p["id"] for p in probes if len(p["principals"]) < 2}
+    declared_skipped = set(expected_doc.get("probes_skipped") or [])
+    if skipped != declared_skipped:
+        problems.append(
+            f"{variant}: probes that cannot run are {sorted(skipped)} but "
+            f"probes_skipped declares {sorted(declared_skipped)}"
+        )
+
     for probe in probes:
+        if probe["id"] in skipped:
+            continue
         for pid in probe["principals"]:
             principal = principals[pid]
-            matched = probe["matches"]
+            # The approximate search returns a bounded candidate set; entitlement filtering is
+            # applied to what it returned, never to the whole corpus (DEC-019).
+            matched = probe["matches"][:ann_limit] if ann_limit else probe["matches"]
+            truth_pool = probe["matches"]
             truth, visible = set(), set()
-            for cid in matched:
+            for cid in truth_pool:
                 chunk = chunks[cid]
                 sources = [documents[d] for d in chunk.get("source_document_ids") or [] if d in documents]
                 # A chunk drawn from several documents contains material from every one of them,
@@ -105,7 +123,7 @@ def check_variant(scenario: Path, variant: str) -> list[str]:
                 # and contributes to no truth set.
                 if sources and all(entitled_by_rule(d["entitlement"], principal) for d in sources):
                     truth.add(cid)
-                if enforce(chunk["entitlement"], principal):
+                if cid in matched and enforce(chunk["entitlement"], principal):
                     visible.add(cid)
 
             row = next((r for r in expected if r["probe"] == probe["id"] and r["principal"] == pid), None)

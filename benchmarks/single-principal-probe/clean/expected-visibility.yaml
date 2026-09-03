@@ -1,0 +1,6 @@
+# pr-009 names one identity and therefore does not run. It is declared skipped rather than
+# contributing rows: a single identity's results establish nothing about a boundary (DEC-007).
+probes_skipped: [pr-009]
+visibility:
+  - { probe: pr-008, principal: p-acme-eng,   visible: [c-0011, c-0031], over_retrieved: [], under_retrieved: [], outcome: clean }
+  - { probe: pr-008, principal: p-globex-eng, visible: [c-0031],         over_retrieved: [], under_retrieved: [], outcome: clean }

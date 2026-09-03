@@ -1,0 +1,12 @@
+# One probe names two principals and runs. The other names one and therefore cannot run: a single
+# identity's results establish nothing about a boundary (DEC-007).
+probes:
+  - id: pr-008
+    query: onboarding checklist
+    principals: [p-acme-eng, p-globex-eng]
+    matches: [c-0011, c-0031]
+
+  - id: pr-009
+    query: finance approval thresholds
+    principals: [p-acme-fin]
+    matches: [c-0041, c-0031]

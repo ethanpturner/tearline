@@ -1,0 +1,5 @@
+probes:
+  - id: pr-006
+    query: incident timeline and remediation
+    principals: [p-acme-eng, p-globex-eng]
+    matches: [c-0091, c-0092]

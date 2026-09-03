@@ -1,0 +1,15 @@
+# The acme principal is unaffected: its entitled chunks rank first and survive the cut.
+# The globex principal receives NOTHING, and no tag is wrong anywhere in the index.
+visibility:
+  - { probe: pr-007, principal: p-acme-eng, visible: [c-0111, c-0112, c-0113], over_retrieved: [], under_retrieved: [], outcome: clean }
+  - probe: pr-007
+    principal: p-globex-eng
+    visible: []
+    over_retrieved: []
+    under_retrieved: [c-0101]
+    outcome: under-retrieval
+    why: >-
+      The approximate search returned three candidates, all acme's; filtering then removed them all.
+      The globex principal's one entitled chunk ranked fourth and was never a candidate. The empty
+      result is not an error, and a generation step handed no context answers anyway -- from
+      parametric memory, with nothing to indicate retrieval returned nothing (DEC-008).

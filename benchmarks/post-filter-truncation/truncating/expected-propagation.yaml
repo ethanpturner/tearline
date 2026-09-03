@@ -1,0 +1,8 @@
+# EMPTY, and the emptiness is the assertion.
+#
+# Every entitlement in this index is correct and matches its source. There is no propagation fault,
+# no drift, and no mistagged chunk. The entire finding lives in the retrieval axis, which is the
+# case DEC-008 exists for: a tool that inspects only the data passes this index completely.
+expected_findings: []
+chunks_examined: 4
+chunks_untraceable: 0

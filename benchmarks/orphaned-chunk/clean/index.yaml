@@ -1,0 +1,5 @@
+# Both chunks trace to a document. Nothing to find.
+filter: rule
+chunks:
+  - { id: c-0091, source_document_ids: [doc-009], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] } }
+  - { id: c-0092, source_document_ids: [doc-009], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] } }

@@ -1,0 +1,6 @@
+expected_unverifiable:
+  - subject: probe pr-009
+    why: "One identity. A differential probe needs at least two, or it establishes nothing (DEC-007)."
+    still_established: >-
+      Nothing about isolation. The correct report says the probe did not run and names it, so a
+      reader can add a second principal rather than believing the boundary was checked.

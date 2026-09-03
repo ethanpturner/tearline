@@ -1,0 +1,6 @@
+# Nothing is wrong with this index. The finding is about what the probe set can establish.
+filter: rule
+chunks:
+  - { id: c-0011, source_document_ids: [doc-001], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [employee], principals: [] } }
+  - { id: c-0031, source_document_ids: [doc-003], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0041, source_document_ids: [doc-004], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [finance], principals: [] } }

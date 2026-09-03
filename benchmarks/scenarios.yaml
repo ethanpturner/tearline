@@ -91,3 +91,27 @@ scenarios:
     # Identical divergence, no acl_modified_at or ingested_at. The mismatch stays `contradicted`
     # and the CAUSE becomes `unverifiable`. Verdict and cause are separate axes and a tool must
     # not collapse them -- guessing either way misdirects the fix.
+
+  - slug: orphaned-chunk
+    name: Chunk that traces to no source document
+    path: benchmarks/orphaned-chunk
+    status: recorded
+    category: indeterminate
+    # The tag is left correct on purpose. A scenario where the orphan is also mistagged would let a
+    # tool pass by finding the tag error while never noticing it could not check it.
+
+  - slug: post-filter-truncation
+    name: Correct tags, and an entitled principal receives nothing
+    path: benchmarks/post-filter-truncation
+    status: recorded
+    category: enforcement
+    # DEC-008 and DEC-019. Identical indexes; the only difference is the candidate limit. Nothing
+    # is mistagged, nothing leaks, and one tenant gets an empty result set that does not error.
+
+  - slug: single-principal-probe
+    name: A probe that cannot establish anything
+    path: benchmarks/single-principal-probe
+    status: recorded
+    category: methodology
+    # DEC-007. The index is fine; the finding is about what the probe set can support. "No leak
+    # detected" from a one-identity probe is the forbidden output.

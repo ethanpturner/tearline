@@ -1,0 +1,16 @@
+# c-0092 is still returned to the acme principal -- the index tag is unchanged and enforcement is
+# correct. But it contributes to no truth set, because nothing establishes what it should be, so
+# it registers as over-retrieval. That is the honest reading: the tool cannot confirm the principal
+# is entitled to it.
+visibility:
+  - probe: pr-006
+    principal: p-acme-eng
+    visible: [c-0091, c-0092]
+    over_retrieved: [c-0092]
+    under_retrieved: []
+    outcome: over-retrieval
+    why: >-
+      Not a claim that a disclosure occurred. The chunk's entitlement may well be correct; it is
+      untraceable, so the retrieval cannot be shown to be permitted. The propagation finding carries
+      the `unverifiable` verdict and this row records that the unverifiable chunk was served.
+  - { probe: pr-006, principal: p-globex-eng, visible: [], over_retrieved: [], under_retrieved: [], outcome: clean }

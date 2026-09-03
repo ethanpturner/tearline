@@ -1,0 +1,14 @@
+must_not_conclude:
+  - claim: "no findings; the index is correctly configured"
+    why: >-
+      **The failure this scenario exists for.** Every tag is right and nothing leaked. A verifier
+      that reports only over-retrieval, or only propagation, emits a clean report for a system in
+      which one tenant receives nothing at all.
+  - claim: "the globex tenant has no matching content"
+    why: >-
+      It has c-0101, which matched the query. It was never a candidate because the search returned
+      three results and filtering ran afterwards.
+  - claim: "p-globex-eng lacks permissions"
+    why: >-
+      Its grants are correct and the chunk's tag is correct. Nothing about entitlement is wrong
+      here; the candidate set was too small.

@@ -1,0 +1,6 @@
+expected_unverifiable:
+  - subject: chunk c-0092
+    why: "No source document, so no ACL to compare against."
+    still_established: >-
+      That the chunk exists, is served to the acme principal, and cannot be shown to be permitted.
+      The gap is in the corpus's provenance, not in the tool.
