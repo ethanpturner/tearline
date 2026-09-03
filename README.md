@@ -1,12 +1,17 @@
 # tearline
 
-**Status: design. Nothing is built.** This repository holds the scope, the decision log, the data
-model, and the evaluation plan. No code has been written, and every statement about behaviour below
-is a statement of intent.
+**Status: verification runs against fixtures.** `tearline` checks propagation, drift, and
+differential retrieval across eight scenarios and sixteen variants, offline. Backend adapters —
+connecting it to a real index and source system — are not built (DEC-017, DEC-018).
 
-## What this is designed to be
+```
+uv run tearline verify benchmarks/untagged-chunk --variant faulted-naive
+uv run tearline evaluate     # every registered variant, scored against its expectations
+```
 
-`tearline` is designed to verify that a retrieval system's access control is real: that every chunk
+## What it does
+
+`tearline` verifies that a retrieval system's access control is real: that every chunk
 in an index carries the entitlement its source document actually has, that those entitlements have
 not drifted since ingestion, and that retrieval under one identity never returns content only
 another identity may see.
@@ -47,7 +52,7 @@ system perfectly secure.
 Both are measured. So is the false-positive rate against legitimate retrieval, because a verifier
 that flags ordinary access is one nobody keeps running.
 
-## Intended scope
+## Scope
 
 `docs/architecture/project-scope.md` for scope and non-goals, `docs/architecture/decision-log.md`
 for what is decided and why, `docs/architecture/evaluation-plan.md` for how it is intended to be

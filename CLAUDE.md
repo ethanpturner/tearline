@@ -4,12 +4,15 @@ Guidance for Claude Code when working in this repository.
 
 ## What this is
 
-`tearline` is designed to verify that a retrieval index's entitlements match the source system's,
-and that retrieval respects them. **Nothing is built.** This repository holds design documents only.
+`tearline` verifies that a retrieval index's entitlements match the source system's, and that
+retrieval respects them.
 
-Do not describe the tool as if it exists. Present indicative is for what runs today, which is
-nothing; use "is designed to" for everything specified but unbuilt. This is the easiest mistake to
-make here and the hardest to notice afterwards.
+**Verification runs against fixtures**: propagation, drift, and differential retrieval across eight
+scenarios and sixteen variants, offline. **Backend adapters are not built** (DEC-017, DEC-018), so
+nothing has yet run against a real index.
+
+Keep tense discipline: present indicative for what runs, "is designed to" for the backends and
+anything else unbuilt.
 
 ## Read before changing anything
 
@@ -46,6 +49,11 @@ Decided. Violating one is a design change requiring a new decision-log entry.
 
 ## Working norms
 
+- **The quality gate is `uv run ruff check . && uv run mypy && uv run pytest`**, plus
+  `uv run tearline evaluate` and `uv run python scripts/validate_fixtures.py`.
+- **The entitlement rule has exactly one implementation**, in `src/tearline/rules.py`. The fixture
+  checker imports it. Two copies of the same predicate drift, and the drift surfaces as confident
+  disagreement between the checker and the tool.
 - **mypy is strict and covers `scripts/` too.**
 - **Every domain object is immutable and forbids unknown fields.**
 - **Where absence would read as a favourable answer, say so explicitly.** An empty tenant set is not
