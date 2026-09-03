@@ -115,3 +115,42 @@ def test_the_query_vector_carries_no_semantics_and_is_stable() -> None:
     assert deterministic_vector("a probe", 16) != deterministic_vector("a probe.", 16)
     assert len(deterministic_vector("a probe", 32)) == 32
     assert all(-1.0 <= v <= 1.0 for v in deterministic_vector("a probe", 16))
+
+
+def test_no_live_test_uses_a_fixture_it_does_not_declare() -> None:
+    """A guard for a failure the offline suite cannot otherwise see.
+
+    The live tests are the only place either adapter is exercised, and they need a service
+    container, so they run in a separate CI job well after everything here has gone green. A test
+    that names a fixture without taking it as a parameter binds the module-level *function object*
+    instead of the fixture's value -- no error at import, no error from ruff or mypy, and an
+    `AttributeError` deep in a helper minutes later.
+
+    That happened, so the check lives here where it costs nothing and reports immediately.
+    """
+    live = Path("tests/live")
+    checked = 0
+    for path in sorted(live.glob("test_*.py")):
+        tree = ast.parse(path.read_text())
+        fixtures = {
+            node.name
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and any(
+                (isinstance(d, ast.Attribute) and d.attr == "fixture")
+                or (isinstance(d, ast.Call) and getattr(d.func, "attr", "") == "fixture")
+                for d in node.decorator_list
+            )
+        }
+        for node in tree.body:
+            if not isinstance(node, ast.FunctionDef) or not node.name.startswith("test_"):
+                continue
+            checked += 1
+            declared = {arg.arg for arg in node.args.args}
+            used = {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
+            undeclared = (used & fixtures) - declared
+            assert not undeclared, (
+                f"{path}:{node.lineno} {node.name} names {sorted(undeclared)} without taking it as "
+                "a parameter, so it binds the fixture function rather than its value"
+            )
+    assert checked, "no live tests found; the scan would pass vacuously"

@@ -176,7 +176,7 @@ def test_engine_enforcement_does_not_catch_a_propagation_fault(
     assert rule.entitled(stored["c-0022"].entitlement, acme)
 
 
-def test_chunks_are_read_with_the_policy_bypassed(backend: PgVectorBackend) -> None:
+def test_chunks_are_read_with_the_policy_bypassed(backend: PgVectorBackend, admin: Any) -> None:
     """The propagation axis compares what the index HOLDS against the source system. A
     policy-filtered read would only ever show rows some principal can already see, which is exactly
     the population where a mislabelling is invisible."""
