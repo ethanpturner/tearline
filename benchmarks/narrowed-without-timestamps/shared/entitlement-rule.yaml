@@ -1,0 +1,15 @@
+# How this source system decides whether a principal is entitled to a chunk.
+#
+# Supplied by the fixture rather than built into the tool (DEC-012). Systems combine tenant, role,
+# and direct grants differently -- some treat roles as additive, some as a required intersection,
+# some scope roles within a tenant and some globally. A tool with one hardcoded predicate would be
+# quietly wrong against every system that does not share its assumption, and would report that
+# wrongness as findings about the index.
+system: fixture-kb
+rule:
+  # Both clauses must hold.
+  tenant: principal.tenant in chunk.entitlement.tenants
+  role: (chunk.entitlement.roles & principal.roles) is non-empty OR "everyone" in chunk.entitlement.roles
+  # `principals` grants are unioned in; empty here.
+  direct: principal.id in chunk.entitlement.principals
+  combine: "tenant AND (role OR direct)"

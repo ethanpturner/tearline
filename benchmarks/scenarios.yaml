@@ -73,3 +73,21 @@ scenarios:
     # object the source has never had an opinion about. The tool abstains on whether the safe tag
     # is *correct* and still catches a tag that is unsafe -- so `unverifiable` keeps its teeth and
     # is forbidden in the faulted variant.
+
+  - slug: narrowed-after-ingest
+    name: Source ACL changed after the index was built
+    path: benchmarks/narrowed-after-ingest
+    status: recorded
+    category: drift
+    # Two drifts in opposite directions in one run: a narrowed source leaves the index permissive
+    # (the oversharing pattern -- nothing breached, a permission tightened and the index did not
+    # hear), a broadened source leaves it restrictive. Timestamps make the cause determinable.
+
+  - slug: narrowed-without-timestamps
+    name: The same drift, with no timestamps to attribute it
+    path: benchmarks/narrowed-without-timestamps
+    status: recorded
+    category: drift
+    # Identical divergence, no acl_modified_at or ingested_at. The mismatch stays `contradicted`
+    # and the CAUSE becomes `unverifiable`. Verdict and cause are separate axes and a tool must
+    # not collapse them -- guessing either way misdirects the fix.

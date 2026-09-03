@@ -1,0 +1,10 @@
+# The same divergence as ../../narrowed-after-ingest/drifted/, with no timestamps anywhere.
+#
+# The mismatch is determinable and the CAUSE is not. A tool that reports `drift` here has guessed;
+# a tool that reports `propagation-fault` has guessed differently. Both would be believed, and one
+# of them sends an operator to re-index when the pipeline is broken, or to audit the pipeline when
+# the schedule is the problem (DEC-006).
+filter: rule
+chunks:
+  - { id: c-0071, source_document_ids: [doc-007], entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0081, source_document_ids: [doc-008], entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] } }

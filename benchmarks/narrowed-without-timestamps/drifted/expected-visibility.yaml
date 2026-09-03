@@ -1,0 +1,18 @@
+# Two drifts, opposite directions, in the same run and the same principal.
+visibility:
+  - { probe: pr-005, principal: p-acme-eng, visible: [c-0071, c-0081], over_retrieved: [], under_retrieved: [], outcome: clean }
+  - probe: pr-005
+    principal: p-globex-eng
+    visible: [c-0071]
+    over_retrieved: [c-0071]
+    under_retrieved: [c-0081]
+    outcome: both
+    why: >-
+      c-0071's source was narrowed and the index still grants globex access it has lost -- the
+      documented enterprise oversharing pattern: nothing was breached, a permission was tightened
+      and the index did not hear about it. c-0081's source was broadened and the index still
+      withholds access globex has gained.
+
+      The same principal is simultaneously over- and under-served by the same stale index. A tool
+      that reports only leaks sees half of one run; a tool that pools the two into a single score
+      reports this as net-zero.

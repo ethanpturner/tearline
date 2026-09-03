@@ -1,0 +1,10 @@
+# The index as built BEFORE the ACL changes and never rebuilt. Both chunks hold the entitlement
+# their documents had on 2026-02-01, and both documents moved on 2026-03-01.
+#
+# Two drifts in opposite directions:
+#   c-0071  source narrowed, index still permissive  -> globex keeps access it lost   (leak)
+#   c-0081  source broadened, index still restrictive -> globex lacks access it gained (withholding)
+filter: rule
+chunks:
+  - { id: c-0071, source_document_ids: [doc-007], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }
+  - { id: c-0081, source_document_ids: [doc-008], ingested_at: 2026-02-01T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] } }

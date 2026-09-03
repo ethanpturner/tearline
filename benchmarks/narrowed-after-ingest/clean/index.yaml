@@ -1,0 +1,7 @@
+# The index re-built after the ACL changes. It matches the current source, so there is nothing to
+# find -- and both chunks carry an `ingested_at` LATER than the ACL change, which is what makes
+# them current.
+filter: rule
+chunks:
+  - { id: c-0071, source_document_ids: [doc-007], ingested_at: 2026-03-05T12:00:00Z, entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] } }
+  - { id: c-0081, source_document_ids: [doc-008], ingested_at: 2026-03-05T12:00:00Z, entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }

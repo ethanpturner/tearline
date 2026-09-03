@@ -1,0 +1,21 @@
+# The same divergence as ../../narrowed-after-ingest/, with one thing removed: this source system
+# does not expose when an ACL last changed.
+#
+# The mismatch is still fully determinable -- the index says one thing and the source says another.
+# What is NOT determinable is WHY. The tag may never have matched (a pipeline bug) or may have
+# matched once and gone stale (a cadence problem). Nothing available distinguishes them, so the
+# cause is `unverifiable` and is not guessed (DEC-006).
+system: fixture-kb
+
+documents:
+  # Narrowed: globex lost access. The index still grants it.
+  - id: doc-007
+    label: Quarterly planning deck
+    # No `acl_modified_at`: this source system does not expose one.
+    entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] }
+
+  # Broadened: globex gained access. The index still withholds it.
+  - id: doc-008
+    label: Rollout schedule
+    # No `acl_modified_at`: this source system does not expose one.
+    entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] }

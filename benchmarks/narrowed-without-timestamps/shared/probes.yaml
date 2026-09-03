@@ -1,0 +1,5 @@
+probes:
+  - id: pr-005
+    query: quarterly planning and rollout schedule
+    principals: [p-acme-eng, p-globex-eng]
+    matches: [c-0071, c-0081]

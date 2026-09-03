@@ -1,0 +1,43 @@
+# Identical mismatches to ../../narrowed-after-ingest/drifted/. Only the CAUSE differs, and that is
+# the whole scenario.
+chunks_examined: 2
+chunks_untraceable: 0
+
+expected_findings:
+  - chunk_id: c-0071
+    verdict: contradicted        # determinable: the index and the source disagree
+    cause: undetermined          # NOT determinable: nothing says why
+    expected: { state: stated, tenants: [acme],         roles: [everyone], principals: [] }
+    observed: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] }
+    why: >-
+      The divergence is plain. Its history is not: this source system exposes no `acl_modified_at`
+      and the index records no `ingested_at`, so the tag may never have matched or may have matched
+      once and gone stale. Nothing available separates the two.
+
+  - chunk_id: c-0081
+    verdict: contradicted
+    cause: undetermined
+    expected: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] }
+    observed: { state: stated, tenants: [acme],         roles: [everyone], principals: [] }
+
+forbidden_causes:
+  - chunk_id: c-0071
+    cause: drift
+    why: >-
+      A guess, and a plausible one, since drift is the commoner explanation. It sends an operator to
+      re-index. If the truth is a pipeline bug, the re-index reproduces the same wrong tag and the
+      finding returns, now with the appearance of having been investigated.
+  - chunk_id: c-0071
+    cause: propagation-fault
+    why: >-
+      The opposite guess, with the opposite cost: an audit of a pipeline that is working, while the
+      index stays stale.
+
+forbidden_verdicts:
+  - chunk_id: c-0071
+    verdict: unverifiable
+    why: >-
+      **The failure this scenario is built to catch.** Verdict and cause are separate axes, and an
+      unknown cause does not make the mismatch unknown. A tool that lets uncertainty about *why*
+      swallow certainty about *what* loses a real, determinable finding -- and loses it in the
+      reassuring direction, since an `unverifiable` verdict reads as "nothing established here".

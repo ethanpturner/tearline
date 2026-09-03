@@ -1,0 +1,15 @@
+must_not_conclude:
+  - claim: "doc-007 is misconfigured in the source system"
+    why: >-
+      The source is correct and current; the index is stale (DEC-005). Sending an operator to the
+      source sends them to the one thing that is right.
+
+  - claim: "p-globex-eng is over-privileged"
+    why: >-
+      The principal's grants are correct. The index is serving a permission that no longer exists,
+      which is not a fact about the identity.
+
+  - claim: "the c-0081 finding is lower priority than the c-0071 finding"
+    why: >-
+      They are the same defect -- one stale index -- with two symptoms. Ranking them invites fixing
+      the leak and leaving the staleness, which leaves the leak's cause in place.

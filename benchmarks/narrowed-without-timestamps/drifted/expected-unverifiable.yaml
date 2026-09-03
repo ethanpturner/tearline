@@ -1,0 +1,8 @@
+# Non-empty on the CAUSE axis only. The mismatches themselves are `contradicted`.
+expected_unverifiable:
+  - subject: "cause of the c-0071 mismatch"
+    why: "No acl_modified_at and no ingested_at, so drift and propagation fault cannot be separated."
+    still_established: "That the index grants globex access the source does not. The finding stands; only its attribution is withheld."
+  - subject: "cause of the c-0081 mismatch"
+    why: "Same."
+    still_established: "That the index withholds access the source grants."

@@ -388,3 +388,35 @@ findings, which DEC-012 rejects for the same reason.
 **Open questions.** Whether a chunk whose sources agree should be reported at all when it has
 several of them. Currently it is treated as an ordinary determinate case, since the sources produce
 one answer, and nothing in the fixtures yet tests that.
+
+---
+
+## DEC-016 — Verdict and cause are separate axes, and the undetermined cause is renamed
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Decision.** `MismatchCause`'s value for "the cause could not be determined" is **`undetermined`**,
+not `unverifiable`. A finding may carry `verdict: contradicted` with `cause: undetermined`, and that
+combination is expected rather than contradictory.
+
+**Why.** DEC-006 named the value `unverifiable`, which collides with the `Verdict` value of the same
+name on a different axis. `verdict: contradicted, cause: unverifiable` reads as a self-contradiction
+and invites the failure it was written to prevent: letting uncertainty about *why* a mismatch exists
+swallow certainty about *whether* it exists.
+
+The two axes answer different questions. The verdict answers *does the index agree with the source*
+— determinable from the two values alone. The cause answers *how did they come apart* — determinable
+only from timestamps. Losing one because the other is unavailable discards a real finding, and
+discards it in the reassuring direction, since an `unverifiable` verdict reads as "nothing
+established here."
+
+Distinct names make the combination legible at a glance, which matters because it is the common case
+against source systems that do not expose ACL modification times.
+
+**Alternatives considered.** Keeping one word and relying on the field name for disambiguation.
+Rejected: findings are read quickly and under pressure, and a reader who has to consult a schema to
+tell which axis a word is on will eventually not bother.
+
+**Tradeoffs.** Two words for a similar idea. Acceptable — they are similar ideas about different
+things, which is exactly when distinct words earn their cost.

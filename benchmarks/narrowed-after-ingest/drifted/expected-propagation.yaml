@@ -1,0 +1,23 @@
+chunks_examined: 2
+chunks_untraceable: 0
+
+expected_findings:
+  - chunk_id: c-0071
+    verdict: contradicted
+    cause: drift
+    expected: { state: stated, tenants: [acme],         roles: [everyone], principals: [] }
+    observed: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] }
+    why_drift: >-
+      doc-007's `acl_modified_at` (2026-03-01) is later than the chunk's `ingested_at`
+      (2026-02-01). The index once matched the source and no longer does, so the ingestion pipeline
+      is not implicated: this is a re-indexing cadence problem.
+
+  - chunk_id: c-0081
+    verdict: contradicted
+    cause: drift
+    expected: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] }
+    observed: { state: stated, tenants: [acme],         roles: [everyone], principals: [] }
+    why_drift: >-
+      Same timestamps, opposite direction. Recorded as a finding despite withholding rather than
+      disclosing: a stale index is one defect with two symptoms, and reporting only the leaking half
+      would tell an operator the re-index is half-needed.

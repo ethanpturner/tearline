@@ -1,0 +1,8 @@
+# The index matching the current source. Nothing to find.
+#
+# Note that "clean" here cannot be *established* the way it can when timestamps exist -- the tool
+# sees agreement and reports no mismatch, which is all agreement ever supports.
+filter: rule
+chunks:
+  - { id: c-0071, source_document_ids: [doc-007], entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] } }
+  - { id: c-0081, source_document_ids: [doc-008], entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] } }

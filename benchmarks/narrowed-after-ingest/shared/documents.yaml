@@ -1,0 +1,18 @@
+# Both documents had their ACLs changed AFTER the index was built. `acl_modified_at` is later than
+# the chunks' `ingested_at`, so the index once matched the source and no longer does. That makes
+# this drift rather than a propagation fault (DEC-006), and the two need different people to fix
+# them: drift is a re-indexing cadence problem, a propagation fault is a pipeline bug.
+system: fixture-kb
+
+documents:
+  # Narrowed: globex lost access. The index still grants it.
+  - id: doc-007
+    label: Quarterly planning deck
+    acl_modified_at: 2026-03-01T09:00:00Z
+    entitlement: { state: stated, tenants: [acme], roles: [everyone], principals: [] }
+
+  # Broadened: globex gained access. The index still withholds it.
+  - id: doc-008
+    label: Rollout schedule
+    acl_modified_at: 2026-03-01T09:00:00Z
+    entitlement: { state: stated, tenants: [acme, globex], roles: [everyone], principals: [] }

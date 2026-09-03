@@ -1,0 +1,16 @@
+# Identities probes are run as. Supplied by the scenario; never provisioned by the tool (DEC-004).
+principals:
+  - id: p-acme-eng
+    label: Acme engineer
+    tenant: acme
+    roles: [employee]
+
+  - id: p-globex-eng
+    label: Globex engineer
+    tenant: globex
+    roles: [employee]
+
+  - id: p-acme-fin
+    label: Acme finance analyst
+    tenant: acme
+    roles: [employee, finance]
