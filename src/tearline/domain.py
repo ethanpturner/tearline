@@ -131,6 +131,18 @@ class ProbeResult(DomainModel):
     under_retrieved: frozenset[str]
     verdict: Verdict
     outcome: ProbeOutcome
+    #: Chunks the probe names that the index does not contain. Not under-retrieval: the store cannot
+    #: return what it does not hold, and counting it as one would blame the entitlement boundary for
+    #: an ingestion gap. Reported separately because it means the probe covered less than it says,
+    #: which is the same kind of fact as a skipped probe -- a boundary partly unexercised.
+    absent_from_index: frozenset[str] = frozenset()
+    #: Chunks returned whose entitlement could not be determined, because no source document backs
+    #: them. **Not over-retrieval.** Over-retrieval is a claim that the principal was not entitled;
+    #: here nothing establishes either way, and the propagation axis already reports these as
+    #: `unverifiable`. Counting them as leaks would let an ingestion gap generate confident
+    #: disclosure findings -- the collapse of "not determined" into "not permitted" that DEC-003
+    #: exists to prevent, arriving through the probe axis instead of the model.
+    undetermined_returned: frozenset[str] = frozenset()
 
 
 class VerificationReport(DomainModel):
@@ -140,3 +152,9 @@ class VerificationReport(DomainModel):
     probes: tuple[ProbeResult, ...]
     probes_skipped: tuple[str, ...]
     partial: bool
+    #: Where isolation was enforced for this run: "engine", "application", or "simulated" when the
+    #: probes were computed from a fixture rather than issued to a store. Reported with every
+    #: result because the same verdict means different things on each (DEC-010, DEC-017, DEC-018):
+    #: a clean run against an engine-enforced backend says the database held the boundary, and the
+    #: same run against an application-enforced one says the retrieval code did -- this time.
+    enforcement_site: str = "simulated"

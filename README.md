@@ -1,9 +1,14 @@
 # tearline
 
-**Status: verified against a real index.** `tearline` checks propagation, drift, and differential
-retrieval across eight scenarios and sixteen variants offline, and the PostgreSQL + `pgvector`
-backend is exercised in CI against a live database with row-level security enforced (DEC-017), and
-the Qdrant backend against a live Qdrant (DEC-018).
+**Status: runs against fixtures and against real stores.** `tearline` checks propagation, drift,
+and differential retrieval across eight scenarios and sixteen variants offline. `tearline scan`
+runs the same three axes against a live system: document ACLs from a POSIX filesystem, and the
+index inventory and retrieval results from PostgreSQL + `pgvector` with row-level security
+(DEC-017) or from Qdrant (DEC-018). Both adapters are exercised in CI against service containers.
+
+It has not been pointed at a production-scale corpus, or at any store but those two. The
+false-positive figure `tearline evaluate` prints is measured over three negative-set subjects,
+which is what the corpus currently supports and is stated that way rather than as a rate.
 
 The two are chosen for contrast rather than popularity, and they fail in opposite directions.
 Postgres enforces in the engine, so an application that forgets its filter still cannot cross the
@@ -22,7 +27,14 @@ shown against real stores rather than argued from a fixture.
 ```
 uv run tearline verify benchmarks/untagged-chunk --variant faulted-naive
 uv run tearline evaluate     # every registered variant, scored against its expectations
+uv run tearline scan path/to/target      # a real source system and a real index; reads only
 ```
+
+A scan target is a directory holding `target.yaml` — naming the source root, its group-to-tenant
+mapping, and the backend — beside a `shared/` directory holding the entitlement rule, the
+principals to run as, and the probes. Nothing in it is optional: a missing entitlement rule is an
+error rather than a default (DEC-012), and so is a missing group mapping (DEC-020), because a
+guessed one is wrong in a way that surfaces as confident findings about the index.
 
 ## What it does
 

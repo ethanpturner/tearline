@@ -7,6 +7,16 @@ working correctly because nothing leaked", "the tenant boundary is broken" -- an
 no narrative, so they are vacuously satisfied rather than checked. They are counted and reported as
 unchecked rather than folded into the pass, because a negative set that silently scores as passed
 is the same overclaiming the project exists to prevent.
+
+`must_not_flag` is different and is checked. Its entries name a subject -- a chunk or a probe --
+that must produce no finding, which is a fact about the output rather than about a narrative. It
+was counted as unchecked prose until the false-positive rate needed a denominator: a negative set
+nothing reads cannot support a claim about false positives, and the evaluation plan makes one.
+
+An `expected_unverifiable` subject in a form nothing here recognises is a **problem**, not a skip.
+Six truth-set keys were authored and never read before this, and the scenarios reported `ok`
+throughout -- a scorer that silently ignores what it does not understand reports the absence of a
+check as a pass.
 """
 
 from __future__ import annotations
@@ -27,6 +37,11 @@ class Score:
     problems: list[str] = field(default_factory=list)
     checked: int = 0
     unchecked_prose: int = 0
+    #: Subjects the negative set forbids flagging, and how many were flagged anyway. The second is
+    #: the false-positive count the evaluation plan reports; the first is its denominator, which is
+    #: the number that stops a rate of 0/0 being written up as perfect precision.
+    negative_subjects: int = 0
+    false_positives: list[str] = field(default_factory=list)
 
     @property
     def passed(self) -> bool:
@@ -34,7 +49,27 @@ class Score:
 
 
 def _load(path: Path) -> dict[str, Any]:
-    return (yaml.safe_load(path.read_text()) or {}) if path.exists() else {}
+    """Read one expectation file, following `inherits:` if it names another.
+
+    A faulted variant inherits its clean variant's negative set: one planted fault must not produce
+    collateral findings, and restating the clean set in each variant would let the two drift. The
+    key was declared in four files and read by nothing until now, so every inherited entry was
+    silently not checked -- which is the failure mode a negative set exists to catch.
+    """
+    if not path.exists():
+        return {}
+    raw = yaml.safe_load(path.read_text()) or {}
+    parent = raw.pop("inherits", None)
+    if not parent:
+        return dict(raw)
+    inherited = _load((path.parent / str(parent)).resolve())
+    merged = dict(inherited)
+    for key, value in raw.items():
+        if isinstance(value, list) and isinstance(inherited.get(key), list):
+            merged[key] = [*inherited[key], *value]
+        else:
+            merged[key] = value
+    return merged
 
 
 def score(report: VerificationReport, expected_dir: Path, scenario: str, variant: str) -> Score:
@@ -89,6 +124,8 @@ def score(report: VerificationReport, expected_dir: Path, scenario: str, variant
             ("visible", set(probe.returned)),
             ("over_retrieved", set(probe.over_retrieved)),
             ("under_retrieved", set(probe.under_retrieved)),
+            ("undetermined_returned", set(probe.undetermined_returned)),
+            ("absent_from_index", set(probe.absent_from_index)),
         ):
             if label in row and set(row[label] or []) != actual:
                 result.problems.append(
@@ -108,21 +145,66 @@ def score(report: VerificationReport, expected_dir: Path, scenario: str, variant
             )
 
     clean = _load(expected_dir / "expected-clean.yaml")
-    for prose_field in ("must_not_flag", "must_not_conclude", "properties_absent"):
+    for prose_field in ("must_not_conclude", "properties_absent"):
         result.unchecked_prose += len(clean.get(prose_field) or [])
+    _score_negative_set(result, clean, findings, report)
+
     unver = _load(expected_dir / "expected-unverifiable.yaml")
     for row in unver.get("expected_unverifiable") or []:
         subject = str(row.get("subject", ""))
+        result.checked += 1
         if subject.startswith("chunk "):
-            result.checked += 1
             chunk_id = subject.split(" ", 1)[1]
             finding = findings.get(chunk_id)
             if finding is None or finding.verdict.value != "unverifiable":
-                result.problems.append(
-                    f"{chunk_id} expected unverifiable, got {finding.verdict.value if finding else 'no finding'}"
-                )
+                got = finding.verdict.value if finding else "no finding"
+                result.problems.append(f"{chunk_id} expected unverifiable, got {got}")
         elif subject.startswith("probe "):
-            result.checked += 1
             if subject.split(" ", 1)[1] not in report.probes_skipped:
                 result.problems.append(f"{subject} expected skipped and was not")
+        elif subject.startswith("cause of the ") and subject.endswith(" mismatch"):
+            # The mismatch is established; only its cause is not. DEC-016 keeps those on separate
+            # axes precisely so this row can assert one while the finding asserts the other.
+            chunk_id = subject.removeprefix("cause of the ").removesuffix(" mismatch")
+            finding = findings.get(chunk_id)
+            if finding is None:
+                result.problems.append(f"{subject}: no finding on {chunk_id}")
+            elif finding.cause.value != "undetermined":
+                result.problems.append(
+                    f"{subject}: cause {finding.cause.value}, expected undetermined"
+                )
+        else:
+            # Not a skip. An unrecognised subject means the truth set asserts something the scorer
+            # does not check, and reporting that as a pass is the overclaiming this project exists
+            # to prevent -- exactly what six unread keys were doing here before.
+            result.problems.append(
+                f"expected_unverifiable subject {subject!r} is in no form the scorer recognises, "
+                "so this expectation was not checked"
+            )
     return result
+
+
+def _score_negative_set(
+    result: Score,
+    clean: dict[str, Any],
+    findings: dict[str, Any],
+    report: VerificationReport,
+) -> None:
+    """Check `must_not_flag`. Every entry names a chunk or a probe that must produce no finding.
+
+    A flagged one is a **false positive** rather than an ordinary failure. The distinction matters
+    for the evaluation plan: precision is a claim about how often the tool reports a fault that is
+    not there, and it can only be measured against subjects authored as definitely-not-faults.
+    """
+    flagged_probes = {p.probe_id for p in report.probes if p.verdict.value == "contradicted"}
+    for row in clean.get("must_not_flag") or []:
+        case = str(row.get("case", ""))
+        subject = case.split(" ", 1)[0]
+        if " is not flagged" not in case:
+            result.unchecked_prose += 1
+            continue
+        result.checked += 1
+        result.negative_subjects += 1
+        if subject in findings or subject in flagged_probes:
+            result.false_positives.append(subject)
+            result.problems.append(f"false positive: {subject} is in the negative set and flagged")

@@ -90,6 +90,47 @@ jobs:
           fi
           echo "domain model carries no content-bearing field"
 
+      # DEC-004 makes the tool read-only against every system it touches, and the guarantee is
+      # structural: the shipped adapters contain no write path, and the schema and fixture load
+      # live in tests/live/harness.py. The unit test checks this by parsing src/, which is the
+      # honest place for it -- this step exists so a reader of the workflow can see the constraint
+      # is checked rather than having to find the test.
+      - name: no shipped adapter can write
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run pytest -q tests/unit/test_backends.py::test_a_shipped_adapter_contains_no_write
+
+      # The default suite must reach no network. The `live` marker is deselected in addopts, which
+      # is the mechanism -- but a marker is a promise about how tests are tagged, and an untagged
+      # test that opens a socket would pass every other check here. Blocking the socket makes the
+      # claim a property of the run.
+      - name: the default suite reaches no network
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          cat > /tmp/no_network.py <<'PY'
+          import socket
+
+          class Blocked(RuntimeError):
+              pass
+
+          def _refuse(*args, **kwargs):
+              raise Blocked(
+                  "the default test suite opened a network connection. Either the test belongs "
+                  "behind the `live` marker, or something in src/ reaches the network on a path "
+                  "that is meant to be offline."
+              )
+
+          socket.socket.connect = _refuse
+          socket.socket.connect_ex = _refuse
+          socket.create_connection = _refuse
+          PY
+          cp /tmp/no_network.py no_network.py
+          PYTHONSTARTUP= uv run python -c "
+          import no_network  # noqa: F401
+          import sys, pytest
+          sys.exit(pytest.main(['-q']))
+          "
+          rm no_network.py
+
       # gitleaks is the enforcement point a local hook cannot provide: `--no-verify` or a clone
       # without `pre-commit install` bypasses the hook. `--redact` keeps any hit out of the log.
       - name: gitleaks

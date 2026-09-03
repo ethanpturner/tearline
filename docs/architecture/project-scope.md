@@ -1,7 +1,6 @@
 # Project scope
 
 **Document version:** 0.1
-**Status:** Proposed
 **Last updated:** 2026-09-03
 
 ## 1. Problem

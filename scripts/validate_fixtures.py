@@ -20,7 +20,7 @@ from pathlib import Path
 import yaml
 
 from tearline.fixtures import load_scenario, load_variant, variants_of
-from tearline.rules import ENFORCEMENT_MODELS, entitled_by_all
+from tearline.rules import enforcement_for, entitled_by_all
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def check(path: Path, slug: str, variant_name: str) -> list[str]:
     scenario = load_scenario(path, slug)
     variant = load_variant(path, variant_name)
-    enforce = ENFORCEMENT_MODELS[variant.enforcement]
+    enforce = enforcement_for(scenario.rule, variant.enforcement)
     expected_doc = yaml.safe_load((path / variant_name / "expected-visibility.yaml").read_text())
     expected = {(r["probe"], r["principal"]): r for r in expected_doc.get("visibility") or []}
 
@@ -47,7 +47,7 @@ def check(path: Path, slug: str, variant_name: str) -> list[str]:
         candidates = probe.matches[: variant.ann_limit] if variant.ann_limit else probe.matches
         for pid in probe.principals:
             principal = scenario.principals[pid]
-            truth, visible = set(), set()
+            truth, visible, undetermined = set(), set(), set()
             for cid in probe.matches:
                 chunk = variant.chunks[cid]
                 sources = [
@@ -55,7 +55,13 @@ def check(path: Path, slug: str, variant_name: str) -> list[str]:
                     for d in chunk.source_document_ids
                     if d in scenario.documents
                 ]
-                if entitled_by_all([s.entitlement for s in sources], principal):
+                if not sources:
+                    # No source document, so nothing establishes that receiving this chunk was
+                    # permitted -- and nothing establishes that it was not (DEC-022). It belongs
+                    # to neither the truth set nor the leak set. Computed here independently of
+                    # the tool, because a validator sharing the tool's logic validates nothing.
+                    undetermined.add(cid)
+                elif entitled_by_all(scenario.rule, [s.entitlement for s in sources], principal):
                     truth.add(cid)
                 if cid in candidates and enforce(chunk.entitlement, principal):
                     visible.add(cid)
@@ -67,8 +73,9 @@ def check(path: Path, slug: str, variant_name: str) -> list[str]:
                 continue
             for label, actual in (
                 ("visible", visible),
-                ("over_retrieved", visible - truth),
+                ("over_retrieved", visible - truth - undetermined),
                 ("under_retrieved", truth - visible),
+                ("undetermined_returned", visible & undetermined),
             ):
                 if set(row.get(label) or []) != actual:
                     problems.append(

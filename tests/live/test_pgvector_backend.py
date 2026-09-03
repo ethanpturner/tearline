@@ -11,15 +11,17 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from tearline.backends.base import RetrievalRequest, deterministic_vector
 from tearline.backends.pgvector import PgVectorBackend
 from tearline.domain import Chunk, Entitlement, EntitlementState, Principal
+from tearline.entitlement_rule import load_rule
 from tearline.fixtures import load_scenario, load_variant
-from tearline.rules import entitled_by_rule
 from tearline.verify import check_propagation
+from tests.live.harness import apply_pgvector_schema, load_pgvector
 
 pytestmark = pytest.mark.live
 
@@ -30,18 +32,34 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture(scope="module")
-def backend() -> Iterator[PgVectorBackend]:
+def live() -> Iterator[tuple[PgVectorBackend, Any]]:
+    """The adapter and, separately, the privileged connection the harness writes through.
+
+    They are handed back as a pair rather than the adapter alone because the adapter has no write
+    path any more (DEC-004): a test that needs to stand up an index reaches for the harness and the
+    connection it writes through, which is exactly the distinction the split is there to make.
+    """
     if not (DSN and ADMIN_DSN):
         pytest.skip("TEARLINE_PG_DSN and TEARLINE_PG_ADMIN_DSN are not both set")
     import psycopg
 
     with psycopg.connect(DSN) as connection, psycopg.connect(ADMIN_DSN) as admin:
         adapter = PgVectorBackend(connection, admin_connection=admin)
-        adapter.apply_schema()
+        apply_pgvector_schema(admin)
         with admin.cursor() as cursor:
             cursor.execute("GRANT SELECT ON chunks TO reader")
         admin.commit()
-        yield adapter
+        yield adapter, admin
+
+
+@pytest.fixture(scope="module")
+def backend(live: tuple[PgVectorBackend, Any]) -> PgVectorBackend:
+    return live[0]
+
+
+@pytest.fixture(scope="module")
+def admin(live: tuple[PgVectorBackend, Any]) -> Any:
+    return live[1]
 
 
 def test_the_adapter_refuses_a_role_that_bypasses_the_policy() -> None:
@@ -74,18 +92,19 @@ def test_the_propagation_axis_refuses_a_principals_connection() -> None:
             adapter.chunks()
 
 
-def _load(adapter: PgVectorBackend, variant: str) -> None:
+def _load(admin: Any, variant: str) -> None:
     scenario = ROOT / "benchmarks" / "wrong-tenant-tag"
     index = load_variant(scenario, variant)
-    adapter.load(
-        [(chunk, deterministic_vector(chunk.id, DIMENSIONS)) for chunk in index.chunks.values()]
+    load_pgvector(
+        admin,
+        [(chunk, deterministic_vector(chunk.id, DIMENSIONS)) for chunk in index.chunks.values()],
     )
 
 
-def test_the_engine_enforces_the_boundary(backend: PgVectorBackend) -> None:
+def test_the_engine_enforces_the_boundary(backend: PgVectorBackend, admin: Any) -> None:
     """The property this backend is chosen for: the policy is applied by the database, so a caller
     that issues an unfiltered query still cannot read another tenant's rows."""
-    _load(backend, "clean")
+    _load(admin, "clean")
     acme = Principal(id="p-acme-eng", label="acme", tenant="acme", roles=frozenset({"employee"}))
     globex = Principal(
         id="p-globex-eng", label="globex", tenant="globex", roles=frozenset({"employee"})
@@ -118,7 +137,7 @@ def test_the_engine_enforces_the_boundary(backend: PgVectorBackend) -> None:
     assert acme_only & set(globex_ids) == set(), "globex received acme-only rows"
 
 
-def test_an_untagged_chunk_is_excluded_by_the_policy(backend: PgVectorBackend) -> None:
+def test_an_untagged_chunk_is_excluded_by_the_policy(backend: PgVectorBackend, admin: Any) -> None:
     """DEC-003 expressed in SQL. The policy requires a non-empty tenant array, so absence excludes
     rather than admits -- the failure `untagged-chunk`'s naive filter commits."""
     untagged = Chunk(
@@ -126,19 +145,21 @@ def test_an_untagged_chunk_is_excluded_by_the_policy(backend: PgVectorBackend) -
         source_document_ids=("doc-001",),
         entitlement=Entitlement(state=EntitlementState.UNKNOWN),
     )
-    backend.load([(untagged, deterministic_vector("c-untagged", DIMENSIONS))])
+    load_pgvector(admin, [(untagged, deterministic_vector("c-untagged", DIMENSIONS))])
     acme = Principal(id="p", label="p", tenant="acme", roles=frozenset({"employee"}))
     assert backend.retrieve(RetrievalRequest(deterministic_vector("q", DIMENSIONS), acme, 20)) == []
 
 
-def test_engine_enforcement_does_not_catch_a_propagation_fault(backend: PgVectorBackend) -> None:
+def test_engine_enforcement_does_not_catch_a_propagation_fault(
+    backend: PgVectorBackend, admin: Any
+) -> None:
     """**The argument for this tool on this backend.**
 
     The engine guarantees the policy is applied. It guarantees nothing about whether the stored
     tenant is the one the source document actually has. Here the faulted index is served faithfully
     and quickly to the wrong tenant, and every database-level control behaves correctly.
     """
-    _load(backend, "faulted")
+    _load(admin, "faulted")
     scenario = ROOT / "benchmarks" / "wrong-tenant-tag"
     findings, _ = check_propagation(
         load_scenario(scenario, "wrong-tenant-tag"), load_variant(scenario, "faulted")
@@ -151,12 +172,13 @@ def test_engine_enforcement_does_not_catch_a_propagation_fault(backend: PgVector
     assert "c-0022" in ids, "the engine enforced the stored tag, which is the point"
 
     stored = {chunk.id: chunk for chunk in backend.chunks()}
-    assert entitled_by_rule(stored["c-0022"].entitlement, acme)
+    rule = load_rule(scenario / "shared" / "entitlement-rule.yaml")
+    assert rule.entitled(stored["c-0022"].entitlement, acme)
 
 
 def test_chunks_are_read_with_the_policy_bypassed(backend: PgVectorBackend) -> None:
     """The propagation axis compares what the index HOLDS against the source system. A
     policy-filtered read would only ever show rows some principal can already see, which is exactly
     the population where a mislabelling is invisible."""
-    _load(backend, "faulted")
+    _load(admin, "faulted")
     assert len(backend.chunks()) == 8

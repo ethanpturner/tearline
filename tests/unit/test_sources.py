@@ -9,9 +9,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from tearline.domain import Chunk, EntitlementState, MismatchCause, Verdict
+from tearline.entitlement_rule import EntitlementRule
 from tearline.fixtures import Scenario, Variant
 from tearline.sources import FilesystemSource
 from tearline.verify import check_propagation
+
+FIXTURE_RULE = EntitlementRule(
+    system="posix-filesystem",
+    tenant="member",
+    role="intersects-or-everyone",
+    direct="principal-listed",
+    combine="tenant AND (role OR direct)",
+)
 
 
 def _source(root: Path) -> FilesystemSource:
@@ -61,6 +70,7 @@ def test_a_chmod_after_ingestion_reads_as_drift(tmp_path: Path) -> None:
         documents=source.documents(),
         principals={},
         probes=(),
+        rule=FIXTURE_RULE,
     )
     variant = Variant(
         name="stale",

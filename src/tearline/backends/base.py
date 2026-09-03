@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from tearline.domain import Chunk, Principal
 
@@ -37,8 +37,13 @@ def deterministic_vector(text: str, dimensions: int) -> list[float]:
     return [(byte - 127.5) / 127.5 for byte in raw]
 
 
+@runtime_checkable
 class Backend(Protocol):
     """What an adapter must provide.
+
+    `runtime_checkable` so `issubclass` works, which is what makes the protocol load-bearing rather
+    than decorative -- `tests/unit/test_backends.py` checks both adapters against it. The check is
+    structural and shallow: it sees the names, not the signatures.
 
     Deliberately two methods. `chunks()` supports the propagation and drift axes, which compare
     stored entitlements against the source system. `retrieve()` supports the differential axis,

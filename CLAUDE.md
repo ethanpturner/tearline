@@ -8,11 +8,20 @@ Guidance for Claude Code when working in this repository.
 retrieval respects them.
 
 **Verification runs against fixtures**: propagation, drift, and differential retrieval across eight
-scenarios and sixteen variants, offline. **Backend adapters are not built** (DEC-017, DEC-018), so
-nothing has yet run against a real index.
+scenarios and sixteen variants, offline, scored against authored truth sets by `tearline evaluate`.
 
-Keep tense discipline: present indicative for what runs, "is designed to" for the backends and
-anything else unbuilt.
+**It also runs against real systems.** `tearline scan` reads document ACLs from a POSIX filesystem
+(DEC-020) and an index inventory and retrieval results from a backend — PostgreSQL with `pgvector`
+and row-level security (DEC-017), or Qdrant (DEC-018). Both adapters are exercised in CI against
+live service containers. What has *not* been done is a run against a production-scale corpus, or
+against any store other than those two.
+
+The entitlement rule is read from the target, never assumed (DEC-012, DEC-021), and the tool writes
+nothing to either system — the adapters contain no write path at all, and
+`tests/unit/test_backends.py` fails if one reappears (DEC-004).
+
+Keep tense discipline: present indicative for what runs, "is designed to" for anything unbuilt. The
+line that matters most is what a scan has and has not been pointed at.
 
 ## Read before changing anything
 
@@ -37,7 +46,9 @@ Decided. Violating one is a design change requiring a new decision-log entry.
   documents, no provisioned identities, no policy changes to observe the effect.
 - **The source system's ACL is ground truth; the index's tag is a claim** (DEC-005).
 - **A propagation fault and a drifted ACL are distinct findings** (DEC-006). Where timestamps
-  cannot distinguish them, the cause is `unverifiable` — never guessed.
+  cannot distinguish them, the cause is `undetermined` — never guessed. The word is deliberately
+  not `unverifiable` (DEC-016): that value lives on the *verdict* axis, and
+  `verdict: contradicted, cause: undetermined` is a normal, expected combination.
 - **A differential probe needs at least two identities** (DEC-007). With one, it does not run and
   the report says so. "No leak detected" from a single-identity probe is the forbidden output.
 - **Under-retrieval is a finding** (DEC-008). A system that returns nothing is not a secure system,
@@ -74,7 +85,7 @@ Decided. Violating one is a design change requiring a new decision-log entry.
 
 One of three tools sharing a thesis: a security claim should be a checkable artifact rather than an
 assertion. The others are [`whence`](https://github.com/ethanpturner/whence) (model provenance) and
-`attestrun` (evaluation attestation, not yet started).
+[`attestrun`](https://github.com/ethanpturner/attestrun) (evaluation attestation).
 
 The three-valued verdict is **declared** in both data models and **implemented** in exactly one
 place, `whence/scripts/verify_pins.py`. **Settled: there is no extraction.** Each project declares its own; the agreement is documented

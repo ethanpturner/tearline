@@ -14,10 +14,11 @@ from pathlib import Path
 import pytest
 
 from tearline.backends.base import RetrievalRequest, deterministic_vector
-from tearline.backends.qdrant import DIMENSIONS, QdrantBackend
+from tearline.backends.qdrant import COLLECTION, DIMENSIONS, QdrantBackend
 from tearline.domain import Principal
 from tearline.fixtures import load_scenario, load_variant
 from tearline.verify import check_propagation
+from tests.live.harness import apply_qdrant_schema, load_qdrant
 
 pytestmark = pytest.mark.live
 
@@ -34,14 +35,16 @@ def backend() -> Iterator[QdrantBackend]:
     if not URL:
         pytest.skip("TEARLINE_QDRANT_URL is not set")
     adapter = QdrantBackend(URL)
-    adapter.apply_schema()
+    apply_qdrant_schema(adapter, COLLECTION)
     yield adapter
 
 
 def _load(adapter: QdrantBackend, variant: str) -> None:
     index = load_variant(ROOT / "benchmarks" / "wrong-tenant-tag", variant)
-    adapter.load(
-        [(chunk, deterministic_vector(chunk.id, DIMENSIONS)) for chunk in index.chunks.values()]
+    load_qdrant(
+        adapter,
+        COLLECTION,
+        [(chunk, deterministic_vector(chunk.id, DIMENSIONS)) for chunk in index.chunks.values()],
     )
 
 
@@ -91,7 +94,7 @@ def test_an_untagged_chunk_is_excluded_by_the_filter(backend: QdrantBackend) -> 
         source_document_ids=("doc-001",),
         entitlement=Entitlement(state=EntitlementState.UNKNOWN),
     )
-    backend.load([(untagged, deterministic_vector("c-untagged", DIMENSIONS))])
+    load_qdrant(backend, COLLECTION, [(untagged, deterministic_vector("c-untagged", DIMENSIONS))])
     query = RetrievalRequest(deterministic_vector("c-untagged", DIMENSIONS), ACME, 20)
     assert "c-untagged" not in backend.retrieve(query)
     assert "c-untagged" in backend.retrieve_unfiltered(query)

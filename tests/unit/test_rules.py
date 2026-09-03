@@ -5,7 +5,20 @@ from __future__ import annotations
 import pytest
 
 from tearline.domain import Entitlement, EntitlementState, Principal
-from tearline.rules import admitted_by_naive_filter, entitled_by_rule, safe_bound
+from tearline.entitlement_rule import EntitlementRule
+from tearline.rules import safe_bound
+
+#: The rule every fixture in `benchmarks/` states. Named here so the tests below read the same
+#: predicate the tool does, rather than a copy that could drift from it.
+FIXTURE_RULE = EntitlementRule(
+    system="fixture-kb",
+    tenant="member",
+    role="intersects-or-everyone",
+    direct="principal-listed",
+    combine="tenant AND (role OR direct)",
+)
+entitled_by_rule = FIXTURE_RULE.entitled
+admitted_by_naive_filter = FIXTURE_RULE.admitted_by_naive_filter
 
 ACME_ENG = Principal(id="p1", label="acme eng", tenant="acme", roles=frozenset({"employee"}))
 GLOBEX_ENG = Principal(id="p2", label="globex eng", tenant="globex", roles=frozenset({"employee"}))

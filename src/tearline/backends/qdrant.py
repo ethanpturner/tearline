@@ -14,7 +14,12 @@ demonstrate it: the same query without the application's filter returns other te
 correctly and quickly. That is not a defect in Qdrant. It is where the boundary lives.
 
 Uses the HTTP API through the standard library rather than a client package: the API surface needed
-here is three endpoints, and a verification tool earns little by adding a dependency for them.
+here is two endpoints, and a verification tool earns little by adding a dependency for them.
+
+**This adapter issues no write.** Creating the collection and loading points belongs to the test
+harness (`tests/live/harness.py`), not to the tool: DEC-004 says the tool does not create test
+documents, and an adapter carrying a `DELETE /collections/...` is one mistaken argument away from
+doing it to a production index.
 """
 
 from __future__ import annotations
@@ -22,7 +27,7 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
-from collections.abc import Sequence
+from datetime import datetime
 from typing import Any
 
 from tearline.backends.base import RetrievalRequest
@@ -30,6 +35,20 @@ from tearline.domain import Chunk, Entitlement, EntitlementState
 
 COLLECTION = "tearline_chunks"
 DIMENSIONS = 16
+
+#: The only payload keys this adapter asks for. Requesting the whole payload would pull chunk text
+#: into the tool's memory wherever an index stores it alongside the metadata -- and DEC-002's rule
+#: is that the tool does not read content, not merely that it does not print it. Naming the fields
+#: keeps that true against an index whose payload the tool did not design.
+PAYLOAD_FIELDS = [
+    "chunk_id",
+    "source_document_ids",
+    "entitlement_state",
+    "tenants",
+    "roles",
+    "principals",
+    "ingested_at",
+]
 
 
 class QdrantBackend:
@@ -58,44 +77,6 @@ class QdrantBackend:
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"{method} {path} -> {exc.code}: {exc.read()[:200]!r}") from exc
 
-    # -- setup ---------------------------------------------------------------------------
-
-    def apply_schema(self) -> None:
-        self._request("DELETE", f"/collections/{self._collection}")
-        self._request(
-            "PUT",
-            f"/collections/{self._collection}",
-            {"vectors": {"size": DIMENSIONS, "distance": "Cosine"}},
-        )
-        # A tenant index is what makes payload filtering efficient. It is an optimisation and not a
-        # boundary: the filter still has to be supplied by the caller.
-        self._request(
-            "PUT",
-            f"/collections/{self._collection}/index?wait=true",
-            {"field_name": "tenants", "field_schema": "keyword"},
-        )
-
-    def load(self, chunks: Sequence[tuple[Chunk, Sequence[float]]]) -> None:
-        points = [
-            {
-                "id": index + 1,
-                "vector": list(vector),
-                "payload": {
-                    "chunk_id": chunk.id,
-                    "source_document_ids": list(chunk.source_document_ids),
-                    "entitlement_state": chunk.entitlement.state.value,
-                    "tenants": sorted(chunk.entitlement.tenants),
-                    "roles": sorted(chunk.entitlement.roles),
-                    "principals": sorted(chunk.entitlement.principals),
-                    "ingested_at": chunk.ingested_at.isoformat() if chunk.ingested_at else None,
-                },
-            }
-            for index, (chunk, vector) in enumerate(chunks)
-        ]
-        self._request(
-            "PUT", f"/collections/{self._collection}/points?wait=true", {"points": points}
-        )
-
     # -- the Backend protocol ------------------------------------------------------------
 
     def chunks(self) -> list[Chunk]:
@@ -104,7 +85,7 @@ class QdrantBackend:
         result = self._request(
             "POST",
             f"/collections/{self._collection}/points/scroll",
-            {"limit": 1000, "with_payload": True},
+            {"limit": 1000, "with_payload": PAYLOAD_FIELDS},
         )
         out: list[Chunk] = []
         for point in result["result"]["points"]:
@@ -119,6 +100,11 @@ class QdrantBackend:
                         roles=frozenset(payload.get("roles") or ()),
                         principals=frozenset(payload.get("principals") or ()),
                     ),
+                    ingested_at=(
+                        datetime.fromisoformat(payload["ingested_at"])
+                        if payload.get("ingested_at")
+                        else None
+                    ),
                 )
             )
         return sorted(out, key=lambda c: c.id)
@@ -132,7 +118,7 @@ class QdrantBackend:
         body: dict[str, Any] = {
             "vector": list(request.vector),
             "limit": request.limit,
-            "with_payload": True,
+            "with_payload": ["chunk_id"],
             "filter": {"must": [{"key": "tenants", "match": {"value": request.principal.tenant}}]},
         }
         result = self._request("POST", f"/collections/{self._collection}/points/search", body)
@@ -148,6 +134,6 @@ class QdrantBackend:
         result = self._request(
             "POST",
             f"/collections/{self._collection}/points/search",
-            {"vector": list(request.vector), "limit": request.limit, "with_payload": True},
+            {"vector": list(request.vector), "limit": request.limit, "with_payload": ["chunk_id"]},
         )
         return [point["payload"]["chunk_id"] for point in result["result"]]

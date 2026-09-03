@@ -5,11 +5,16 @@
 # some scope roles within a tenant and some globally. A tool with one hardcoded predicate would be
 # quietly wrong against every system that does not share its assumption, and would report that
 # wrongness as findings about the index.
+#
+# Each clause is named from a closed set (DEC-021); `entitlement_rule.py` holds the vocabularies.
 system: fixture-kb
 rule:
-  # Both clauses must hold.
-  tenant: principal.tenant in chunk.entitlement.tenants
-  role: (chunk.entitlement.roles & principal.roles) is non-empty OR "everyone" in chunk.entitlement.roles
-  # `principals` grants are unioned in; empty here.
-  direct: principal.id in chunk.entitlement.principals
-  combine: "tenant AND (role OR direct)"
+  # principal.tenant must be in chunk.entitlement.tenants. An empty tenant set restricts rather
+  # than releases -- `member-or-unrestricted` is the other reading, and this system is not it.
+  tenant: member
+  # Any shared role admits, and the literal role `everyone` admits anyone. `subset` would be the
+  # required-intersection reading; `intersects` the additive one without the `everyone` grant.
+  role: intersects-or-everyone
+  # A principal named directly on the chunk. Unioned with the role clause, not overriding tenancy.
+  direct: principal-listed
+  combine: tenant AND (role OR direct)

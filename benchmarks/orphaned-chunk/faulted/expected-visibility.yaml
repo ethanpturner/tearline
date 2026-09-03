@@ -1,16 +1,23 @@
 # c-0092 is still returned to the acme principal -- the index tag is unchanged and enforcement is
-# correct. But it contributes to no truth set, because nothing establishes what it should be, so
-# it registers as over-retrieval. That is the honest reading: the tool cannot confirm the principal
-# is entitled to it.
+# correct. It contributes to no truth set, because nothing establishes what it should be, so it is
+# recorded on its own axis (DEC-022) rather than counted as over-retrieval. `over_retrieved` asserts
+# the principal was NOT entitled, and nothing here establishes that.
+#
+# This file said the opposite until DEC-022. It called the retrieval over-retrieval and attached a
+# note saying it was not a claim that a disclosure occurred -- the label and the note disagreeing,
+# with the label being the part a reader acts on.
 visibility:
   - probe: pr-006
     principal: p-acme-eng
     visible: [c-0091, c-0092]
-    over_retrieved: [c-0092]
+    over_retrieved: []
     under_retrieved: []
-    outcome: over-retrieval
+    undetermined_returned: [c-0092]
+    outcome: clean
     why: >-
-      Not a claim that a disclosure occurred. The chunk's entitlement may well be correct; it is
-      untraceable, so the retrieval cannot be shown to be permitted. The propagation finding carries
-      the `unverifiable` verdict and this row records that the unverifiable chunk was served.
+      Nothing here is a disclosure and nothing here is a pass for c-0092. The chunk's entitlement
+      may well be correct; it is untraceable, so the retrieval can be shown neither permitted nor
+      not. The propagation finding carries the `unverifiable` verdict, and `undetermined_returned`
+      records that the unverifiable chunk was served -- which is the fact, without the verdict the
+      fact does not support.
   - { probe: pr-006, principal: p-globex-eng, visible: [], over_retrieved: [], under_retrieved: [], outcome: clean }

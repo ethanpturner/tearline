@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from tearline.domain import Chunk, Entitlement, EntitlementState, Principal, Probe, SourceDocument
+from tearline.entitlement_rule import EntitlementRule, load_rule
 
 
 def _entitlement(raw: dict[str, Any] | None) -> Entitlement:
@@ -28,6 +29,10 @@ class Scenario:
     documents: dict[str, SourceDocument]
     principals: dict[str, Principal]
     probes: tuple[Probe, ...]
+    #: How this source system decides entitlement. Read from the fixture; there is no default
+    #: (DEC-012), so a scenario that does not state one fails to load rather than being verified
+    #: against an assumption nobody made.
+    rule: EntitlementRule
 
 
 @dataclass(frozen=True)
@@ -36,6 +41,35 @@ class Variant:
     chunks: dict[str, Chunk]
     enforcement: str
     ann_limit: int | None
+
+
+def load_principals(path: Path) -> dict[str, Principal]:
+    """The identities a scan or a scenario runs under. Supplied, never discovered: DEC-004 forbids
+    the tool provisioning one, and inventing a principal would test a boundary nobody uses."""
+    return {
+        str(p["id"]): Principal(
+            id=str(p["id"]),
+            label=str(p.get("label", p["id"])),
+            tenant=p.get("tenant"),
+            roles=frozenset(p.get("roles") or []),
+        )
+        for p in yaml.safe_load(path.read_text())["principals"]
+    }
+
+
+def load_probes(path: Path) -> tuple[Probe, ...]:
+    """Queries and the chunks each should reach. Authored even in a live scan, because relevance is
+    not under test (DEC-011): which chunks a query *should* return is a statement about the corpus,
+    and letting the store make it would mean grading the store against itself."""
+    return tuple(
+        Probe(
+            id=str(p["id"]),
+            query=str(p["query"]),
+            principals=tuple(p["principals"]),
+            matches=tuple(p["matches"]),
+        )
+        for p in yaml.safe_load(path.read_text())["probes"]
+    )
 
 
 def load_scenario(path: Path, slug: str) -> Scenario:
@@ -52,25 +86,15 @@ def load_scenario(path: Path, slug: str) -> Scenario:
         )
         for d in docs["documents"]
     }
-    principals = {
-        str(p["id"]): Principal(
-            id=str(p["id"]),
-            label=str(p.get("label", p["id"])),
-            tenant=p.get("tenant"),
-            roles=frozenset(p.get("roles") or []),
-        )
-        for p in yaml.safe_load((shared / "principals.yaml").read_text())["principals"]
-    }
-    probes = tuple(
-        Probe(
-            id=str(p["id"]),
-            query=str(p["query"]),
-            principals=tuple(p["principals"]),
-            matches=tuple(p["matches"]),
-        )
-        for p in yaml.safe_load((shared / "probes.yaml").read_text())["probes"]
+    principals = load_principals(shared / "principals.yaml")
+    probes = load_probes(shared / "probes.yaml")
+    return Scenario(
+        slug=slug,
+        documents=documents,
+        principals=principals,
+        probes=probes,
+        rule=load_rule(shared / "entitlement-rule.yaml"),
     )
-    return Scenario(slug=slug, documents=documents, principals=principals, probes=probes)
 
 
 def load_variant(path: Path, name: str) -> Variant:

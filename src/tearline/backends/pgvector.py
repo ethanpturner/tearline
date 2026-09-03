@@ -13,11 +13,15 @@ The residual risk it does carry is **completeness**: with an approximate index, 
 filtering runs after the ANN scan unless a supporting index lets the planner push it down, so a
 selective policy can return fewer matches than exist. Confidentiality holds and completeness breaks
 silently, which is `post-filter-truncation` occurring natively rather than as a bug.
+
+**This adapter issues no write.** The schema and the fixture load live in the test harness
+(`tests/live/harness.py`). DEC-004 makes the tool read-only against every system it touches, and
+that is not a property a reviewer should have to establish by reading the call sites: an adapter
+holding a `TRUNCATE` is read-only only for as long as nobody calls it.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from tearline.backends.base import RetrievalRequest
@@ -28,41 +32,11 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 # The session variable an RLS policy reads to identify the caller. Set per statement rather than
 # per connection so a pooled connection cannot carry one principal's identity into another's query.
+#
+# The tool reads this name; it does not define the policy. Against a real deployment the policy is
+# the operator's, and the adapter's job is to identify itself in the way that policy expects. The
+# schema the test harness applies is in `tests/live/harness.py`.
 PRINCIPAL_SETTING = "tearline.principal_tenant"
-
-SCHEMA = (
-    """
-CREATE EXTENSION IF NOT EXISTS vector;
-
-CREATE TABLE IF NOT EXISTS chunks (
-    id                  text PRIMARY KEY,
-    source_document_ids text[] NOT NULL DEFAULT '{}',
-    ingested_at         timestamptz,
-    entitlement_state   text NOT NULL,
-    tenants             text[] NOT NULL DEFAULT '{}',
-    roles               text[] NOT NULL DEFAULT '{}',
-    principals          text[] NOT NULL DEFAULT '{}',
-    embedding           vector(16)
-);
-
-ALTER TABLE chunks ENABLE ROW LEVEL SECURITY;
--- Applies to the table owner too. Without this the owner bypasses the policy and a test run as the
--- owner would observe perfect isolation that no other role has.
-ALTER TABLE chunks FORCE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS chunk_tenant_isolation ON chunks;
-CREATE POLICY chunk_tenant_isolation ON chunks
-    FOR SELECT
-    USING (
-        -- An empty tenant array is NOT a grant (DEC-003). The policy is written so absence
-        -- excludes rather than admits, which is the failure `untagged-chunk` exists for.
-        cardinality(tenants) > 0
-        AND current_setting('"""
-    + PRINCIPAL_SETTING
-    + """', true) = ANY (tenants)
-    );
-"""
-)
 
 
 class BypassesRowSecurity(RuntimeError):
@@ -128,40 +102,6 @@ class PgVectorBackend:
                 "isolation this adapter appears to observe would be an artifact of the connection "
                 "rather than a property of the policy. Connect as an unprivileged role."
             )
-
-    # -- setup ---------------------------------------------------------------------------
-
-    def apply_schema(self) -> None:
-        """Requires the admin connection: CREATE EXTENSION is privileged."""
-        connection = self._admin or self._connection
-        with connection.cursor() as cursor:
-            cursor.execute(SCHEMA)
-        connection.commit()
-
-    def load(self, chunks: Sequence[tuple[Chunk, Sequence[float]]]) -> None:
-        """Insert chunks through the admin connection; the policy governs SELECT, not writes."""
-        connection = self._admin or self._connection
-        with connection.cursor() as cursor:
-            cursor.execute("TRUNCATE chunks")
-            for chunk, vector in chunks:
-                cursor.execute(
-                    """
-                    INSERT INTO chunks (id, source_document_ids, ingested_at, entitlement_state,
-                                        tenants, roles, principals, embedding)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        chunk.id,
-                        list(chunk.source_document_ids),
-                        chunk.ingested_at,
-                        chunk.entitlement.state.value,
-                        sorted(chunk.entitlement.tenants),
-                        sorted(chunk.entitlement.roles),
-                        sorted(chunk.entitlement.principals),
-                        str(list(vector)),
-                    ),
-                )
-        connection.commit()
 
     # -- the Backend protocol ------------------------------------------------------------
 

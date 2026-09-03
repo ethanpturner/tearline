@@ -1,7 +1,6 @@
 # Decision log
 
 **Document version:** 0.1
-**Status:** Proposed
 **Last updated:** 2026-09-03
 
 Every entry is Accepted or Rejected. Nothing is Proposed: an undecided question belongs in the
@@ -578,3 +577,78 @@ document.
 than owner-group-other and would make the mapping richer. It also introduces a second permission
 model on the same filesystem, and which one governs when they disagree is exactly the multi-system
 authority question DEC-005 already records as unresolved.
+
+---
+
+## DEC-021 — The stated entitlement rule is composed from a closed vocabulary
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Decision.** DEC-012 requires the fixture to state its source system's entitlement rule. That
+statement takes the form of three named clauses — tenant, role, direct — and a named combinator,
+each drawn from a closed set held in `entitlement_rule.py`. A clause outside the set is refused at
+load, and a missing rule is an error rather than a default.
+
+**Why a closed set rather than an expression.** The obvious reading of DEC-012 is that the fixture
+supplies a predicate the tool evaluates — an expression language, or a callable. That fails for the
+reason DEC-013 gives about enforcement models: a fixture able to describe entitlement freely can
+describe anything, and its author writes both the bug and the expectation, so a passing scenario
+demonstrates only that two authored artifacts agree.
+
+It also fails on a second count that DEC-013 does not face. An expression evaluator running text
+from a configuration file is an execution surface, in a tool whose whole subject is what a system
+should and should not let a caller reach.
+
+**Why this is not the hardcoded predicate DEC-012 rejects.** The clauses cover the variations
+DEC-012 names as its reason: roles additive (`intersects`) or required-intersection (`subset`),
+scoped or global; direct grants unioned (`tenant AND (role OR direct)`) or able to substitute for
+tenancy (`(tenant OR direct) AND role`); an empty tenant set restricting (`member`) or releasing
+(`member-or-unrestricted`). What the tool has is no *default* — the failure DEC-012 identifies is a
+predicate applied to a system nobody checked it against, and a rule that will not load without
+being stated cannot be that.
+
+**Tradeoffs.** A system whose semantics the vocabulary cannot express cannot be onboarded without
+extending it. That is deliberate and it is visible: extending the set is a change to this
+repository, reviewed, rather than a line in somebody's fixture. The set is expected to grow, and
+each addition should name the real system that motivated it.
+
+---
+
+## DEC-022 — A returned chunk whose entitlement is undetermined is not over-retrieval
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Decision.** When a probe returns a chunk that no source document backs — an untraceable chunk, or
+an identifier the index inventory does not contain — the result records it in
+`ProbeResult.undetermined_returned` and in neither `over_retrieved` nor `under_retrieved`. The
+probe's verdict is unaffected by it.
+
+**Why.** `over_retrieved` carries `verdict: contradicted`, which asserts the principal was not
+entitled to what they received. For an untraceable chunk nothing establishes that. Nothing
+establishes the opposite either — which is why the chunk is reported rather than ignored — but a
+`contradicted` verdict on undetermined evidence is precisely the collapse DEC-003 exists to
+prevent, arriving through the probe axis instead of through the model.
+
+**This reverses what `orphaned-chunk` originally asserted,** and the reversal is recorded rather
+than quietly applied. That truth set called the retrieval `over-retrieval` and attached a note
+saying it was "not a claim that a disclosure occurred". The label and the note disagreed, and
+DEC-016 already settled which of those a reader acts on: findings are read quickly and under
+pressure, and a disclaimer in a `why:` field does not survive being pasted into a ticket. A tool
+whose output needs a footnote to stop meaning the wrong thing has chosen the wrong output.
+
+**What is still reported.** That the chunk exists, that it was served to the principal, and that
+nothing available shows the retrieval was permitted. The propagation axis carries the
+`unverifiable` verdict; the probe axis now records that the unverifiable chunk was served, on its
+own axis rather than folded into the leak count. A run containing one marks the report `partial`
+where the chunk was named by a probe and absent from the index.
+
+**Tradeoffs.** An operator scanning only the leak count will not see it. Mitigated by printing the
+undetermined rows above the summary and by `chunks_untraceable`, which DEC-003's reasoning already
+requires to be reported alongside findings so that a low finding count cannot read as good news.
+
+**Alternatives considered.** A fourth `ProbeOutcome` value. Rejected: outcome answers *how did the
+returned set differ from truth*, and this is a statement that part of the returned set has no truth
+to differ from. Putting it on the same enum would make `clean` mean two different things depending
+on a field elsewhere.
