@@ -104,3 +104,70 @@ jobs:
         run: |
           uv build
           uv run --isolated --with dist/*.whl tearline --help
+
+  # The backend adapter is verified here and nowhere else: there is no local Postgres, so this
+  # service container is where DEC-017's claims about engine enforcement actually get tested rather
+  # than asserted. The suite is deselected by the `live` marker in every other context.
+  pgvector:
+    name: pgvector + row-level security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: tearline
+          POSTGRES_DB: tearline
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install dependencies
+        id: install
+        run: uv sync --locked --all-extras --all-groups
+
+      # A role that is NOT the table owner. Row-level security is bypassed by the owner unless
+      # FORCE is set, and the schema does set it -- but running as a separate role means the test
+      # would still be meaningful if that line were ever removed, rather than passing because the
+      # connection happened to be privileged.
+      - name: create an unprivileged role
+        run: |
+          PGPASSWORD=tearline psql -h localhost -U postgres -d tearline -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE reader LOGIN PASSWORD 'reader';
+          GRANT USAGE ON SCHEMA public TO reader;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO reader;
+          SQL
+
+      - name: live backend tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          TEARLINE_PG_DSN: postgresql://postgres:tearline@localhost:5432/tearline
+        run: uv run pytest -m live -q
+
+      # A green live suite would be worthless if the marker filter silently selected nothing.
+      - name: the live suite actually ran
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          TEARLINE_PG_DSN: postgresql://postgres:tearline@localhost:5432/tearline
+        run: |
+          uv run pytest -m live -q 2>&1 | tee /tmp/live.txt
+          grep -qE '[1-9][0-9]* passed' /tmp/live.txt \
+            || { echo "::error::the live suite selected no tests"; exit 1; }
+          grep -q 'skipped' /tmp/live.txt \
+            && { echo "::error::a live test skipped; the DSN was probably not set"; exit 1; }
+          echo "the live backend suite ran against a real PostgreSQL"
