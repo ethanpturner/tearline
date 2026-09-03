@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Every uv invocation asserts the lockfile is current instead of silently updating it.
+env:
+  UV_LOCKED: "1"
+
+jobs:
+  ci:
+    name: lint / typecheck / test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # gitleaks scans full history.
+          fetch-depth: 0
+          # Nothing here pushes; dropping the token keeps a compromised step from writing.
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      # --locked fails if uv.lock is stale, so a dependency edit cannot land without it.
+      - name: Install dependencies
+        id: install
+        run: uv sync --locked --all-groups
+
+      # Each check runs even when an earlier one failed, so one run reports every problem. They
+      # are gated on the install rather than on `!cancelled()` alone, because `uv run` would
+      # otherwise build its own environment and report green on top of a broken install.
+      - name: ruff check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run ruff check --output-format=github .
+
+      - name: ruff format
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run ruff format --check --diff .
+
+      - name: mypy
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run mypy
+
+      # The `live` marker is deselected by addopts, so this touches no real vector store or source
+      # system and needs no credential.
+      - name: pytest
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run pytest -q
+
+      # Checks that a hand-authored expected-visibility.yaml is arithmetically consistent with its
+      # own fixture. It tests the SCENARIO rather than the tool, so a failure here means the answer
+      # key is wrong -- which is worth distinguishing from the step below.
+      - name: scenario expectations are self-consistent
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run python scripts/validate_fixtures.py
+
+      # Every registered variant, scored against its authored expectations. Tests the TOOL against
+      # the answer key the previous step just validated.
+      - name: verification agrees with the authored expectations
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run tearline evaluate
+
+      # DEC-002 forbids chunk text anywhere in the data model: a report about a confidentiality
+      # failure gets pasted into tickets and CI logs, so a report quoting leaked material is itself
+      # a leak. The rule is a design property and nothing else enforces it, so a field added in a
+      # tidy-up would pass every other check in this workflow.
+      - name: no domain object carries chunk content
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          if grep -nE '^\s+(text|content|body|passage|chunk_text)\s*:' src/tearline/domain.py; then
+            echo "::error file=src/tearline/domain.py::a content-bearing field was added to the domain model (DEC-002)"
+            exit 1
+          fi
+          echo "domain model carries no content-bearing field"
+
+      # gitleaks is the enforcement point a local hook cannot provide: `--no-verify` or a clone
+      # without `pre-commit install` bypasses the hook. `--redact` keeps any hit out of the log.
+      - name: gitleaks
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks detect --source . --no-banner --redact
+
+      # `[project.scripts]` claims an entry point; this proves a built wheel exposes it.
+      - name: the built wheel exposes the CLI
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          uv build
+          uv run --isolated --with dist/*.whl tearline --help
