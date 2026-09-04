@@ -1,5 +1,6 @@
 must_not_flag:
   - case: "p-globex-eng receives c-0081 and not c-0071"
+    covered_by: expected-visibility.yaml
     why: >-
       Correct under the current source ACLs. A tool holding any memory of the drifted variant must
       not carry suspicion into a corpus that agrees with its source.

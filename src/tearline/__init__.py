@@ -96,6 +96,7 @@ def _cmd_evaluate(args: argparse.Namespace) -> int:
     failed = 0
     total_prose = 0
     negative_subjects = 0
+    covered_elsewhere = 0
     false_positives: list[str] = []
     for entry in registry.get("scenarios") or []:
         if entry["status"] != "recorded":
@@ -108,6 +109,7 @@ def _cmd_evaluate(args: argparse.Namespace) -> int:
             result = score(report, path / name, str(entry["slug"]), name)
             total_prose += result.unchecked_prose
             negative_subjects += result.negative_subjects
+            covered_elsewhere += result.covered_elsewhere
             false_positives += [f"{entry['slug']}/{name}:{s}" for s in result.false_positives]
             if result.passed:
                 print(f"ok    {entry['slug']}/{name}  ({result.checked} checks)")
@@ -122,6 +124,10 @@ def _cmd_evaluate(args: argparse.Namespace) -> int:
     print(
         f"\nfalse positives: {len(false_positives)} of {negative_subjects} negative-set subjects"
         + (f" -- {', '.join(false_positives)}" if false_positives else "")
+    )
+    print(
+        f"{covered_elsewhere} further negative-set entries assert a visibility outcome rather than "
+        f"the absence of a finding; expected-visibility.yaml checks those exhaustively."
     )
     print(
         f"{total_prose} further negative-set entries are prose and are not machine-checked; "

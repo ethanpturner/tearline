@@ -2,6 +2,7 @@ inherits: ../clean/expected-clean.yaml
 
 must_not_flag:
   - case: "c-0041 is not flagged"
+    subject: { chunk: c-0041 }
     why: >-
       The sibling chunk from the same source document is correctly tagged. One chunk losing its
       metadata does not implicate the rest of the document.

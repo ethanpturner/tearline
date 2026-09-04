@@ -42,6 +42,11 @@ class Score:
     #: the number that stops a rate of 0/0 being written up as perfect precision.
     negative_subjects: int = 0
     false_positives: list[str] = field(default_factory=list)
+    #: Negative-set entries whose assertion is about *visibility* rather than about the absence of
+    #: a finding. `expected-visibility.yaml` checks those exhaustively, row by row, so they are
+    #: neither unchecked prose nor a second precision subject -- counting them as either would be
+    #: wrong in opposite directions.
+    covered_elsewhere: int = 0
 
     @property
     def passed(self) -> bool:
@@ -147,7 +152,12 @@ def score(report: VerificationReport, expected_dir: Path, scenario: str, variant
     clean = _load(expected_dir / "expected-clean.yaml")
     for prose_field in ("must_not_conclude", "properties_absent"):
         result.unchecked_prose += len(clean.get(prose_field) or [])
-    _score_negative_set(result, clean, findings, report)
+    expected_defects = {
+        (str(r["probe"]), str(r["principal"]))
+        for r in (vis.get("visibility") or [])
+        if (r.get("over_retrieved") or r.get("under_retrieved"))
+    }
+    _score_negative_set(result, clean, findings, report, expected_ids, expected_defects)
 
     unver = _load(expected_dir / "expected-unverifiable.yaml")
     for row in unver.get("expected_unverifiable") or []:
@@ -189,22 +199,65 @@ def _score_negative_set(
     clean: dict[str, Any],
     findings: dict[str, Any],
     report: VerificationReport,
+    expected_findings: set[str],
+    expected_defects: set[tuple[str, str]],
 ) -> None:
-    """Check `must_not_flag`. Every entry names a chunk or a probe that must produce no finding.
+    """Measure precision: how often the tool reports a fault where there is none.
 
-    A flagged one is a **false positive** rather than an ordinary failure. The distinction matters
-    for the evaluation plan: precision is a claim about how often the tool reports a fault that is
-    not there, and it can only be measured against subjects authored as definitely-not-faults.
+    **The negative set is every subject the truth set does not name as a fault**, not only the ones
+    an author thought to write down. A scenario with one planted fault and seven correct chunks
+    offers seven chances to false-positive, and counting only the two or three called out by name
+    made the denominator a measure of how much prose somebody wrote.
+
+    Three populations, each a place a spurious finding can appear:
+
+      chunks   every chunk examined that `expected-propagation.yaml` does not list as a finding
+      probes   every (probe, principal) row that `expected-visibility.yaml` says is clean
+      named    subjects an author called out in `must_not_flag`, kept because the reasoning on them
+               is worth reading even where the derived sets already cover the subject
+
+    A flagged one is a **false positive** rather than an ordinary failure, and the two are reported
+    separately: a missed fault and a fabricated one are different defects with different costs, and
+    a single pass/fail hides which of them a change caused.
     """
+    # Chunks. `chunks_examined` counts the index; the findings the truth set expects are the
+    # positives, and everything else in the index is a subject that must stay silent.
+    silent_chunks = max(report.chunks_examined - len(expected_findings), 0)
+    result.negative_subjects += silent_chunks
+    for chunk_id in set(findings) - expected_findings:
+        result.false_positives.append(chunk_id)
+
+    # Probe rows. A row the truth set marks `clean` must not acquire a defect: over-retrieval is a
+    # disclosure claim and under-retrieval a completeness claim, and inventing either is as bad as
+    # missing a real one.
+    for probe in report.probes:
+        key = (probe.probe_id, probe.principal_id)
+        if key in expected_defects:
+            continue
+        result.negative_subjects += 1
+        if probe.over_retrieved or probe.under_retrieved:
+            result.false_positives.append(f"{probe.probe_id}/{probe.principal_id}")
+
+    # Named subjects. `subject:` is structured so the entry is checked; `case:` stays prose because
+    # it says what the case *is*, which a reader needs and a matcher does not. An entry with
+    # neither is counted as prose rather than silently passing.
     flagged_probes = {p.probe_id for p in report.probes if p.verdict.value == "contradicted"}
     for row in clean.get("must_not_flag") or []:
-        case = str(row.get("case", ""))
-        subject = case.split(" ", 1)[0]
-        if " is not flagged" not in case:
-            result.unchecked_prose += 1
+        subject = row.get("subject")
+        if not isinstance(subject, dict):
+            if row.get("covered_by"):
+                result.covered_elsewhere += 1
+            else:
+                result.unchecked_prose += 1
             continue
         result.checked += 1
-        result.negative_subjects += 1
-        if subject in findings or subject in flagged_probes:
-            result.false_positives.append(subject)
-            result.problems.append(f"false positive: {subject} is in the negative set and flagged")
+        named_chunk = subject.get("chunk")
+        named_probe = subject.get("probe")
+        if named_chunk is not None and str(named_chunk) in findings:
+            result.false_positives.append(str(named_chunk))
+        if named_probe is not None and str(named_probe) in flagged_probes:
+            result.false_positives.append(str(named_probe))
+
+    for subject in sorted(set(result.false_positives)):
+        result.problems.append(f"false positive: {subject} is in the negative set and was flagged")
+    result.false_positives = sorted(set(result.false_positives))

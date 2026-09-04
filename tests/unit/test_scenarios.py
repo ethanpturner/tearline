@@ -55,3 +55,30 @@ def test_a_skipped_probe_never_contributes_a_result() -> None:
     assert "pr-009" in report.probes_skipped
     assert not [p for p in report.probes if p.probe_id == "pr-009"]
     assert report.partial
+
+
+def test_the_negative_set_is_derived_and_not_merely_authored() -> None:
+    """DEC-023. Precision is measured over every subject the truth set does not name as a fault.
+
+    The figure was "0 of 3" when only entries phrased as "X is not flagged" counted, which measured
+    how much prose somebody had typed rather than how many chances the tool had to invent a
+    finding. A scenario with one planted fault and seven correct chunks offers seven.
+    """
+    total = 0
+    for entry in yaml.safe_load((ROOT / "benchmarks" / "scenarios.yaml").read_text())["scenarios"]:
+        if entry["status"] != "recorded":
+            continue
+        path = ROOT / str(entry["path"])
+        scenario = load_scenario(path, str(entry["slug"]))
+        for variant in variants_of(path):
+            result = score(
+                verify(scenario, load_variant(path, variant)),
+                path / variant,
+                str(entry["slug"]),
+                variant,
+            )
+            assert not result.false_positives, result.false_positives
+            total += result.negative_subjects
+    # Not pinned exactly -- adding a scenario should raise it without editing this test -- but a
+    # collapse back toward the handful of authored subjects is what this guards against.
+    assert total >= 60, f"the negative set shrank to {total} subjects"

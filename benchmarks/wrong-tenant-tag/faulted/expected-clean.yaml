@@ -4,12 +4,14 @@ inherits: ../clean/expected-clean.yaml
 
 must_not_flag:
   - case: "c-0021 is not flagged"
+    subject: { chunk: c-0021 }
     why: >-
       The sibling chunk from the same source document is correctly tagged. A tool that widens a
       finding to every chunk of an affected document reports one fault as two and misstates the
       blast radius.
 
   - case: "pr-002 is not flagged for any principal"
+    subject: { probe: pr-002 }
     why: >-
       The fault is not reachable from that probe. Degrading unrelated probes once a fault is found
       turns one finding into a report nobody can triage.

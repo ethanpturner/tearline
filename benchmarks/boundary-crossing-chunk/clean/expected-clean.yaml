@@ -1,11 +1,13 @@
 must_not_flag:
   - case: "c-0052 is visible to both principals"
+    subject: { chunk: c-0052 }
     why: >-
       Single-source, correctly tagged, shared with both tenants. A tool made cautious by the
       presence of a multi-source chunk elsewhere in the document set must not widen its suspicion
       to well-determined neighbours.
 
   - case: "c-0051 is withheld from p-globex-eng"
+    covered_by: expected-visibility.yaml
     why: >-
       Correct under the safe bound. Reporting this as under-retrieval would demand the tool assert
       that globex *should* see the chunk -- precisely the policy call it just declined to make.

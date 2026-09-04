@@ -652,3 +652,53 @@ requires to be reported alongside findings so that a low finding count cannot re
 returned set differ from truth*, and this is a statement that part of the returned set has no truth
 to differ from. Putting it on the same enum would make `clean` mean two different things depending
 on a field elsewhere.
+
+---
+
+## DEC-023 — The negative set is every subject the truth set does not name as a fault
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Decision.** Precision is measured over a **derived** negative set: every chunk examined that
+`expected-propagation.yaml` does not list as a finding, plus every `(probe, principal)` row that
+`expected-visibility.yaml` marks clean. Subjects authored by name in `must_not_flag` are checked in
+addition, not instead.
+
+**Why.** The figure was previously "0 of 3", because only entries phrased as *"X is not flagged"*
+were matched and only three were written that way. That made the denominator a measure of how much
+prose somebody had typed, not of how many chances the tool had to invent a finding. A scenario with
+one planted fault and seven correct chunks offers seven of them.
+
+Deriving it also makes the denominator grow with the corpus rather than with the documentation. Any
+scenario added later contributes its own silent subjects without anyone remembering to write them
+down, which is the failure mode the previous version had.
+
+**What it measures now.** 74 subjects across sixteen variants, 0 false positives. Verified by
+mutation: flagging every multi-tenant chunk as exceeding its safe bound — the specific error
+`wrong-tenant-tag` was built to catch, since a document shared across two tenants is the commonest
+legitimate pattern in a shared corpus — is reported as a false positive on the chunks concerned, and
+a spurious under-retrieval on clean probe rows fires 31 of the 74.
+
+**Why authored entries are kept.** The derived set says *that* a subject must stay silent; the
+authored ones say *why*, and the reasoning is the part worth reading — "a role check requiring an
+exact set match rather than a non-empty intersection would deny this and report it as
+under-retrieval" is a specific predicted failure, not a restatement.
+
+**A third bucket, because two were wrong.** Most authored `must_not_flag` entries turn out to assert
+a **visibility outcome** — which chunks a principal receives — rather than the absence of a finding.
+`expected-visibility.yaml` already checks those exhaustively, row by row. Counting them as
+unchecked prose understates what the corpus verifies; counting them as precision subjects
+double-counts rows already scored. They carry `covered_by:` and are reported separately.
+
+The distinction was found by getting it wrong: mapping every entry to a "must produce no finding"
+subject reported five false positives that were not false positives. `c-0051` is a multi-source
+chunk that the tool correctly reports as `unverifiable`, and an entry saying it is *withheld from a
+principal* says nothing about whether it produces a finding.
+
+**Tradeoffs.** A derived negative set cannot express a subject the corpus does not contain, and it
+inherits any error in the positive truth set: a fault the truth set fails to list becomes a negative
+subject, and detecting it would be scored as a false positive. That is a real inversion, and it is
+the same risk `expected-propagation.yaml` already carries — the mitigation is that both are authored
+against the fixture rather than against the tool's output.
+

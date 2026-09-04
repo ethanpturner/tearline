@@ -2,6 +2,7 @@ inherits: ../clean/expected-clean.yaml
 
 must_not_flag:
   - case: "c-0041 is excluded for p-globex-eng and p-acme-eng"
+    covered_by: expected-visibility.yaml
     why: >-
       The correctly tagged sibling is correctly excluded, by tenant and by role respectively. The
       enforcement bug is specific to absent metadata; reporting the working exclusions as findings

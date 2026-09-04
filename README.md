@@ -7,8 +7,10 @@ index inventory and retrieval results from PostgreSQL + `pgvector` with row-leve
 (DEC-017) or from Qdrant (DEC-018). Both adapters are exercised in CI against service containers.
 
 It has not been pointed at a production-scale corpus, or at any store but those two. The
-false-positive figure `tearline evaluate` prints is measured over three negative-set subjects,
-which is what the corpus currently supports and is stated that way rather than as a rate.
+false-positive figure `tearline evaluate` prints is measured over **74 negative-set subjects** —
+every chunk the truth sets do not name as a fault, and every probe row they mark clean — and stands
+at zero. That set is derived rather than authored (DEC-023), so it grows with the corpus instead of
+with the documentation.
 
 The two are chosen for contrast rather than popularity, and they fail in opposite directions.
 Postgres enforces in the engine, so an application that forgets its filter still cannot cross the
