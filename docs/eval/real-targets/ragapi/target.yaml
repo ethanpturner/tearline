@@ -1,0 +1,13 @@
+# NOT loadable by `tearline scan` today: the scan loader accepts only `source.kind: filesystem`
+# (DEC-020) and backends `qdrant` / `pgvector` reading tearline's own schema. rt_ragapi.py builds
+# the equivalent Scenario/Backend in code. Recorded here as the target description a future
+# adapter would consume.
+source:
+  kind: ownership-ledger          # would-be adapter: file_id -> owner, from LibreChat's `files` collection (or an authored ledger)
+  system: librechat-files-ledger
+backend:
+  kind: rag_api-http              # would-be adapter: GET /ids + POST /query_multiple as the principal; inventory via langchain_pg_embedding
+  base_url: http://127.0.0.1:PORT
+  dsn: postgresql://rt_ragapi:***@127.0.0.1:5432/rt_ragapi_VERSION
+  collection: rt_VERSION
+enforcement: rule

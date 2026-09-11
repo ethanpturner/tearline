@@ -1,0 +1,11 @@
+# Open WebUI: a chunk (in physical collection `open-webui_files`, logical tenant `file-<id>`) is
+# readable by a principal holding a read grant on the file/knowledge that owns the tenant. Owner is
+# `metadata.user_id`; grants live in OWUI's AccessGrants / file.access_control. No cross-tenant role
+# model at the store layer. Stated in tearline's closed vocabulary (DEC-021): tenant and role
+# ignored, the direct (owner/grant) clause is the whole rule.
+system: open-webui
+rule:
+  tenant: ignored
+  role: ignored
+  direct: principal-listed
+  combine: tenant AND role AND direct

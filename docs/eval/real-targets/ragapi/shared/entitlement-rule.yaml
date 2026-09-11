@@ -1,0 +1,11 @@
+# LibreChat rag_api: a file's chunks are readable by the file's owner only. The owner is the
+# verified token id of the uploader (`user_id` in chunk metadata). No tenancy, no roles.
+# Stated in tearline's closed vocabulary (DEC-021): tenant and role clauses ignored, direct grant
+# is the whole rule. `ignored` clauses evaluate true, so `tenant AND role AND direct` reduces to
+# `direct`.
+system: librechat-rag_api
+rule:
+  tenant: ignored
+  role: ignored
+  direct: principal-listed
+  combine: tenant AND role AND direct
