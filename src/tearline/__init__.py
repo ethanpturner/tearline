@@ -7,7 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from tearline.domain import VerificationReport
+from tearline.domain import Verdict, VerificationReport
 from tearline.evaluate import score
 from tearline.fixtures import load_scenario, load_variant, variants_of
 from tearline.scan import load_target, scan
@@ -76,19 +76,44 @@ def _print_report(report: VerificationReport, title: str) -> None:
         )
 
 
+def exit_status(report: VerificationReport) -> int:
+    """Non-zero when the report carries anything a caller must not ignore (DEC-024).
+
+    Three things qualify: a propagation finding, a probe whose verdict is `contradicted` on either
+    axis, and a partial run. Before DEC-024 only the first and last did, so a correctly tagged index
+    that served one tenant another's chunk -- or served an entitled tenant nothing -- exited 0, and a
+    caller reading the exit status alone was told the boundary held.
+    """
+    contradicted = any(probe.verdict is Verdict.CONTRADICTED for probe in report.probes)
+    return 1 if (report.propagation or contradicted or report.partial) else 0
+
+
+def _emit(report: VerificationReport, title: str, as_json: bool) -> None:
+    """The report as text, or as the domain object serialised.
+
+    The JSON form is `VerificationReport.model_dump_json()` and nothing else: no field is added on
+    the way out, so DEC-002 holds for it by construction -- the model has no field that can hold
+    chunk content, and the serialiser has nowhere to put any.
+    """
+    if as_json:
+        print(report.model_dump_json(indent=2))
+    else:
+        _print_report(report, title)
+
+
 def _cmd_verify(args: argparse.Namespace) -> int:
     path = Path(args.scenario)
     report = verify(load_scenario(path, path.name), load_variant(path, args.variant))
-    _print_report(report, f"{path.name}/{args.variant}")
-    return 1 if (report.propagation or report.partial) else 0
+    _emit(report, f"{path.name}/{args.variant}", args.json)
+    return exit_status(report)
 
 
 def _cmd_scan(args: argparse.Namespace) -> int:
     """Run against a real source system and a real index. Reads only (DEC-004)."""
     path = Path(args.target)
     report = scan(path, load_target(path))
-    _print_report(report, path.name)
-    return 1 if (report.propagation or report.partial) else 0
+    _emit(report, path.name, args.json)
+    return exit_status(report)
 
 
 def _cmd_evaluate(args: argparse.Namespace) -> int:
@@ -142,9 +167,11 @@ def main() -> int:
     ver = sub.add_parser("verify", help="verify one scenario variant")
     ver.add_argument("scenario")
     ver.add_argument("--variant", default="faulted")
+    ver.add_argument("--json", action="store_true", help="emit the report as JSON, ids only")
     ver.set_defaults(func=_cmd_verify)
     sc = sub.add_parser("scan", help="verify a real index against a real source system")
     sc.add_argument("target", help="directory holding target.yaml and shared/")
+    sc.add_argument("--json", action="store_true", help="emit the report as JSON, ids only")
     sc.set_defaults(func=_cmd_scan)
     ev = sub.add_parser("evaluate", help="score every registered scenario variant")
     ev.set_defaults(func=_cmd_evaluate)

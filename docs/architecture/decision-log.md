@@ -1,7 +1,7 @@
 # Decision log
 
 **Document version:** 0.1
-**Last updated:** 2026-09-03
+**Last updated:** 2026-09-10
 
 Every entry is Accepted or Rejected. Nothing is Proposed: an undecided question belongs in the
 scope document or an issue, not here. Violating an accepted decision is a design change requiring a
@@ -702,3 +702,37 @@ subject, and detecting it would be scored as a false positive. That is a real in
 the same risk `expected-propagation.yaml` already carries — the mitigation is that both are authored
 against the fixture rather than against the tool's output.
 
+---
+
+## DEC-024 — The exit status reports every contradicted verdict
+
+**Date:** 2026-09-10
+**Status:** Accepted
+
+**Decision.** `tearline verify` and `tearline scan` exit non-zero when the report carries a
+propagation finding, a probe result whose verdict is `contradicted` on either axis, or a partial
+run. The rule has one implementation, `tearline.exit_status`, and both commands call it.
+
+**Why.** Until this entry the exit status was `1 if (report.propagation or report.partial) else 0`,
+stated nowhere but in code. Two of the corpus's own scenarios exited 0 under it: `post-filter-
+truncation/truncating`, where every tag is correct and one tenant receives nothing, and any
+over-retrieval on a correctly tagged index — the DEC-018 failure exactly, a filter forgotten on one
+query path while the inventory is clean. A caller reading the exit status in CI was told the
+boundary held in the two cases DEC-008 and DEC-018 exist to surface. The text report said
+otherwise; the exit status is what a pipeline reads.
+
+**What counts.** A `contradicted` probe verdict means over-retrieval, under-retrieval, or both
+(DEC-008: under-retrieval is a finding). `undetermined_returned` and `absent_from_index` do not set
+it: DEC-022 keeps undetermined evidence off the `contradicted` axis, and an absent chunk marks the
+run partial, which already exits non-zero for the reason DEC-007 gives — a boundary partly
+unexercised is not a boundary shown to hold.
+
+**Alternatives considered.** A second status code distinguishing "partial" from "contradicted".
+Rejected for now: a caller that wants the distinction has the report, and `--json` (added in the
+same change) gives it the report as the domain object, ids only, with no field the model does not
+already declare. A status vocabulary richer than zero and non-zero would be a second place the
+report's meaning is encoded, and the two would drift.
+
+**Tradeoffs.** A scan against a real store that returns one over-retrieved chunk now fails a
+pipeline. That is the intended reading; a caller who wants to proceed anyway has the report and the
+decision in front of them.

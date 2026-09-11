@@ -49,6 +49,12 @@ A tearline, in an intelligence document, is the line below which the content is 
 wider audience. The name is the unit of work: the tool is designed to check that the line in the
 index is where the source system says it should be.
 
+## What it is, in one line
+
+Index-layer reconciliation — every chunk's tag compared against the source system's ACL, with drift
+separated from a propagation fault — plus differential retrieval, the same probe under two
+identities, scored for what was disclosed and for what was withheld.
+
 ## Why this does not already exist
 
 OWASP's RAG Security Cheat Sheet prescribes three controls: store access-control metadata
@@ -67,6 +73,24 @@ The one widely-cited real-world instance is the Microsoft 365 Copilot oversharin
 framing that stuck is that Copilot did not overshare the data — the permissions did. The vendor
 response is containment: stop indexing the risky material until it is cleaned up. There is no
 verifier.
+
+### Adjacent work
+
+Three kinds of tool sit next to this one and none of them does what it does. Authorization engines
+generate the filter a retrieval query carries — Oso compiles Polar to SQLAlchemy predicates over
+pgvector, Permit.io and Cerbos translate a policy into a store filter, SpiceDB's guidance covers
+pre- and post-filtering, Pangea attaches policies at ingestion. Each enforces; none asks whether the
+tag it filters on is true. Sync ledgers record that a permission sync ran — Onyx's v4.0.0 admin
+tooling shows each sync attempt and what failed, Elastic's connectors run an access-control sync
+beside the content sync — and a ledger of attempts is not a comparison of the result against the
+source. Knostic simulates queries across user profiles against Copilot and Glean and reports
+oversharing at the answer layer; it is closed, it does not read the index, and it does not measure
+under-retrieval. Its own account of Copilot after a permission is revoked — the file is gone from
+the user's view and Copilot can still see it — is the drift class this tool's second axis exists
+for ([knostic.ai](https://www.knostic.ai/blog/file-permissions-copilot)). On the measurement side,
+ARBITER ([arXiv 2512.20535](https://arxiv.org/html/2512.20535)) scores an LLM-based access filter
+for both false-allow and false-block, which is the only prior work found that counts
+over-restriction as an error; it scores the filter, not a deployed index.
 
 ## The two failures it is designed to measure
 
