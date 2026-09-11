@@ -35,6 +35,9 @@ from tearline.domain import Chunk, Entitlement, EntitlementState
 
 COLLECTION = "tearline_chunks"
 DIMENSIONS = 16
+#: Points per scroll call. Qdrant caps a single scroll page; the inventory read pages until the
+#: store reports no further offset, so this bounds one request and not the number examined.
+SCROLL_PAGE = 1000
 
 #: The only payload keys this adapter asks for. Requesting the whole payload would pull chunk text
 #: into the tool's memory wherever an index stores it alongside the metadata -- and DEC-002's rule
@@ -77,19 +80,36 @@ class QdrantBackend:
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"{method} {path} -> {exc.code}: {exc.read()[:200]!r}") from exc
 
+    def _scroll(self) -> list[dict[str, Any]]:
+        """Every point's payload, following `next_page_offset` until the store returns none.
+
+        The scroll endpoint returns at most `limit` points per call. One call with `limit: 1000`
+        was the whole inventory read until 2026-09-10, so a collection of 1,001 points reported
+        `chunks_examined: 1000` and a mislabelled chunk past the cap was never compared against its
+        source -- which is the one population the propagation axis exists to examine. A page size
+        is a transport detail; the number of chunks examined is a claim, and it has to be the truth.
+        """
+        payloads: list[dict[str, Any]] = []
+        offset: Any = None
+        while True:
+            body: dict[str, Any] = {"limit": SCROLL_PAGE, "with_payload": PAYLOAD_FIELDS}
+            if offset is not None:
+                body["offset"] = offset
+            result = self._request("POST", f"/collections/{self._collection}/points/scroll", body)[
+                "result"
+            ]
+            payloads.extend(point["payload"] for point in result["points"])
+            offset = result.get("next_page_offset")
+            if offset is None:
+                return payloads
+
     # -- the Backend protocol ------------------------------------------------------------
 
     def chunks(self) -> list[Chunk]:
         """Every point as stored. No privilege is required, which is itself the finding: anything
         able to reach the collection can read all of it."""
-        result = self._request(
-            "POST",
-            f"/collections/{self._collection}/points/scroll",
-            {"limit": 1000, "with_payload": PAYLOAD_FIELDS},
-        )
         out: list[Chunk] = []
-        for point in result["result"]["points"]:
-            payload = point["payload"]
+        for payload in self._scroll():
             out.append(
                 Chunk(
                     id=payload["chunk_id"],

@@ -73,23 +73,56 @@ def test_a_shipped_adapter_contains_no_write() -> None:
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
                 if id(node) in docstrings:
                     continue
-                head = node.value.strip().upper()
-                for statement in SQL_WRITES:
-                    assert not head.startswith(statement), f"{path}: {statement} reached src/"
-            # An HTTP adapter writes by method, not by SQL. The method is the first argument.
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-                if node.func.attr != "_request" or not node.args:
-                    continue
-                verb = node.args[0]
-                assert isinstance(verb, ast.Constant), f"{path}: computed HTTP method"
-                assert verb.value not in HTTP_WRITES or _is_read_endpoint(node), (
-                    f"{path}: a {verb.value} reached src/"
+                _assert_not_a_write(_head(node), path)
+            # An f-string is a string the first check never sees: `f"TRUNCATE {table}"` is an
+            # `ast.JoinedStr`, not an `ast.Constant`, and the guard passed one until 2026-09-10.
+            # Its leading literal part is the statement head, and is checked the same way.
+            if isinstance(node, ast.JoinedStr):
+                _assert_not_a_write(_head(node), path)
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+                continue
+            # A statement assembled elsewhere and handed to `execute` cannot be read here, so it
+            # is refused here: read-only that depends on following a variable to its definition is
+            # read-only by convention, which is what this test exists to replace.
+            if node.func.attr == "execute" and node.args:
+                statement = node.args[0]
+                assert isinstance(statement, ast.Constant | ast.JoinedStr), (
+                    f"{path}:{node.lineno}: execute() of a computed statement"
                 )
+            # An HTTP adapter writes by method, not by SQL. The method is the first argument and
+            # the path is the second; both have to be readable at the call site for the same
+            # reason the SQL statement does.
+            if node.func.attr != "_request" or not node.args:
+                continue
+            verb = node.args[0]
+            assert isinstance(verb, ast.Constant), f"{path}: computed HTTP method"
+            if len(node.args) > 1:
+                assert isinstance(node.args[1], ast.Constant | ast.JoinedStr), (
+                    f"{path}:{node.lineno}: _request() with a computed path"
+                )
+            assert verb.value not in HTTP_WRITES or _is_read_endpoint(node), (
+                f"{path}: a {verb.value} reached src/"
+            )
 
     for adapter in ADAPTERS:
         source = inspect.getsource(adapter)
         for method in ("apply_schema", "load"):
             assert f"def {method}(" not in source, f"{adapter.__name__}.{method} is a write path"
+
+
+def _head(node: ast.Constant | ast.JoinedStr) -> str:
+    """The leading literal text of a string, plain or formatted, normalised for comparison."""
+    if isinstance(node, ast.Constant):
+        return str(node.value).strip().upper()
+    first = node.values[0] if node.values else None
+    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+        return first.value.strip().upper()
+    return ""
+
+
+def _assert_not_a_write(head: str, path: Path) -> None:
+    for statement in SQL_WRITES:
+        assert not head.startswith(statement), f"{path}: {statement} reached src/"
 
 
 def _is_read_endpoint(call: ast.Call) -> bool:
