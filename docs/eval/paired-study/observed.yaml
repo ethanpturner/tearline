@@ -1,0 +1,90 @@
+# What each column of the panel observed, per row of matrix.yaml. Identifiers only.
+#
+# tearline: caught is yes | no | refused. `refused` means the adapter declined to run against the
+#   connection and reported an error rather than a verdict (f-superuser); it is not a finding.
+#   `axes` names which of propagation, drift, differential the finding appeared on.
+# semgrep: caught is yes | no | partial. `partial` means a rule fired on the fault but also fires
+#   on the clean branch, or only in the v1 rule set (rag_api/query-multiple). Rules are in
+#   semgrep-rules.yaml; SARIF for every target is held outside the repository.
+# mantis, codex_security: not run at the time of writing.
+provenance:
+  tearline_ragref: live, captured 2026-09-10 against local pgvector and Qdrant, tearline at b5eda9e
+  tearline_rag_api: live, captured 2026-09-10, tearline imported read-only at f443540 (docs/eval/real-targets.md)
+  semgrep: Semgrep OSS 1.177.0, 2026-09-10, offline, no model; default rulesets p/default, p/python, p/security-audit plus semgrep-rules.yaml
+  replayable_in_ci: false
+rows:
+  - id: ragref/f-parent-dir
+    tearline: {caught: "yes", axes: [propagation, differential], stores: {pgvector: 2 contradicted + over-retrieval for acme + under-retrieval for globex, qdrant: same}}
+    semgrep: {caught: "no", rule: null, evidence_locator: null}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: ragref/f-exclusion
+    tearline: {caught: "yes", axes: [propagation, differential], stores: {pgvector: 5 contradicted + the 5 untagged chunks over-retrieved by every globex probe, qdrant: 5 contradicted + under-retrieval only}}
+    semgrep: {caught: "yes", rule: exclusion-shaped-tenant-filter, evidence_locator: "src/ragref/stores.py:67,69,205,207"}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: ragref/f-untagged
+    tearline: {caught: "yes", axes: [propagation, differential], stores: {pgvector: 5 contradicted + under-retrieval for both acme principals, qdrant: same}}
+    semgrep: {caught: "no", rule: null, evidence_locator: null}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: ragref/f-limit-first
+    tearline: {caught: "yes", axes: [differential], stores: {pgvector: under-retrieval on 13 probe/principal pairs, qdrant: clean}}
+    semgrep: {caught: partial, rule: hnsw-candidate-bound-below-k, evidence_locator: "src/ragref/stores.py:59,60", note: fault-shaped rule written knowing the fault}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: ragref/f-chmod
+    tearline: {caught: "yes", axes: [drift, differential], stores: {pgvector: 5 contradicted with cause drift + over-retrieval for acme + under-retrieval for globex, qdrant: same}}
+    semgrep: {caught: "no", rule: null, evidence_locator: null}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: ragref/f-superuser
+    tearline: {caught: refused, axes: [], stores: {pgvector: BypassesRowSecurity raised and exit 1 with nothing verified, qdrant: clean because the fault is in the PostgreSQL connection}}
+    semgrep: {caught: "yes", rule: app-dsn-superuser-or-default-role, evidence_locator: "ragref.yaml:17; tearline/pgvector/target.yaml:11"}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: ragref/f-merge
+    tearline: {caught: "yes", axes: [propagation, differential], stores: {pgvector: 2 contradicted exceeds-safe-bound + each over-retrieved by the other tenant + partial, qdrant: same}}
+    semgrep: {caught: "no", rule: null, evidence_locator: null}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: ragref/f-policy-intent
+    tearline: {caught: "no", axes: [], stores: {pgvector: clean exit 0, qdrant: clean exit 0}}
+    semgrep: {caught: "no", rule: null, evidence_locator: null}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: rag_api/ids-listing
+    tearline: {caught: "yes", axes: [differential], pre_fix: 8 of 8 probes over-retrieve, post_fix: 0 of 8}
+    semgrep: {caught: "yes", rule: route-store-read-without-owner-scope, evidence_locator: "app/routes/document_routes.py:396,398"}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: rag_api/query-multiple
+    tearline: {caught: "yes", axes: [differential], pre_fix: 8 of 8 probes over-retrieve, post_fix: 0 of 8}
+    semgrep: {caught: partial, rule: route-store-read-without-owner-scope, evidence_locator: "app/routes/document_routes.py:1473,1480", note: v1 rules only; v2 exempts filter=<variable> to remove 16 post-fix false positives and loses this hit}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: rag_api/query-first-hit
+    tearline: {caught: "no", axes: [], note: route not exercised by the probe recipe}
+    semgrep: {caught: "yes", rule: authorize-result-set-from-first-hit, evidence_locator: "app/routes/document_routes.py:554"}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: rag_api/documents-by-any-id
+    tearline: {caught: "no", axes: [], note: read routes not exercised; the delete route is a write tearline never issues}
+    semgrep: {caught: "yes", rule: route-store-read-without-owner-scope, evidence_locator: "app/routes/document_routes.py:438-446,480,487,1326-1334"}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: rag_api/null-owner
+    tearline: {caught: "yes", axes: [propagation, differential], pre_fix: contradicted with cause undetermined and returned to the other principal, post_fix: contradicted with cause undetermined and 1 of 8 probes under-retrieving for its owner}
+    semgrep: {caught: "yes", rule: null-owner-admits-everyone, evidence_locator: "app/routes/document_routes.py:558"}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: rag_api/rollback-by-file-id
+    tearline: {caught: "no", axes: [], note: ingestion-path write; nothing reaches the index}
+    semgrep: {caught: "no", rule: null, evidence_locator: null}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}
+  - id: rag_api/shared-table-collection-id
+    tearline: {caught: "no", axes: [], note: probes ran within one collection}
+    semgrep: {caught: "no", rule: null, evidence_locator: null}
+    mantis: {status: not-run}
+    codex_security: {status: not-run}

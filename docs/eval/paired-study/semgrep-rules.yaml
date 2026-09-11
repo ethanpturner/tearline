@@ -1,0 +1,160 @@
+# Semgrep rules used as the deterministic floor of the paired-study panel.
+#
+# Provenance: written 2026-09-10 with knowledge of the injected faults and of the six holes pull
+# request #319 closed in rag_api. They are not a detector anyone should deploy. The floor's purpose
+# is to show what a hand-written pattern can and cannot express against the same faults a code
+# reviewer and tearline are scored on. `metadata.floor` records whether a rule is generic,
+# semi-generic, fault-shaped (written knowing the fault), or app-shaped (names one application's
+# methods). This is the v2 set; a v1 set that caught POST /query_multiple pre-fix at the cost of
+# sixteen post-fix false positives is described in paired-study.md and not kept here.
+rules:
+  # (a1) Generic: nearest-neighbour ORDER BY ... LIMIT with no tenant predicate in the same SQL
+  # statement. Cannot see an RLS policy, so it fires on every store whose tenancy is engine-enforced.
+  - id: ann-order-limit-without-tenant-predicate
+    languages: [python]
+    severity: WARNING
+    message: >
+      Vector-distance ORDER BY with LIMIT and no tenant predicate in the same statement. If tenancy
+      is filtered after this scan, entitled rows can be truncated out (under-retrieval) or, without
+      a policy, leaked. A rule cannot see whether a row-level security policy applies.
+    patterns:
+      - pattern-regex: '(?s)ORDER BY\s+\w+\s*<[-=#]>\s*%s(?:(?!tenant).)*?LIMIT'
+    metadata:
+      floor: generic
+      fault: 'f-limit-first (shape only)'
+  # (a2) Fault-shaped: an ANN candidate bound set so small that post-scan filtering truncates.
+  - id: hnsw-candidate-bound-below-k
+    languages: [python]
+    severity: WARNING
+    message: >
+      hnsw.ef_search set to a literal at or below a plausible k, or iterative scan disabled, while
+      row-level security filters after the index scan. The candidate set is truncated before the
+      policy sees it.
+    patterns:
+      - pattern-either:
+          - pattern-regex: "hnsw\\.ef_search\\s*=\\s*([0-9]|1[0-9])\\b"
+          - pattern-regex: "hnsw\\.iterative_scan\\s*=\\s*off"
+    metadata:
+      floor: fault-shaped
+      fault: 'f-limit-first'
+  # (b) Exclusion-shaped tenant filter: a negated membership test on the tenant field.
+  - id: exclusion-shaped-tenant-filter
+    languages: [python]
+    severity: ERROR
+    message: >
+      Tenant authorization written as an exclusion (NOT member-of / must_not / except). A row or
+      point with no tenant recorded is admitted to everyone, because nothing excludes the caller.
+    patterns:
+      - pattern-either:
+          - pattern-regex: "NOT\\s+current_setting\\([^)]*\\)\\s*=\\s*ANY\\s*\\(\\s*tenants"
+          - pattern-regex: "NOT\\s*\\(\\s*cardinality\\(tenants\\)"
+          - pattern: |
+              {..., "must_not": [{"key": "tenants", ...}, ...], ...}
+          - pattern: |
+              {"key": "tenants", "match": {"except": $E}}
+          - pattern-regex: "tenants?\\s*(!=|<>|NOT IN)\\s"
+    metadata:
+      floor: generic
+      fault: 'f-exclusion'
+  # (c) Qdrant search with no filter at all.
+  - id: qdrant-search-without-filter
+    languages: [python]
+    severity: ERROR
+    message: Qdrant search issued without a query filter; every tenant's points are candidates.
+    patterns:
+      - pattern-either:
+          - pattern: $S._request("POST", $P, $B)
+          - pattern: $C.search(..., collection_name=$N, ...)
+          - pattern: $C.query_points(..., collection_name=$N, ...)
+      - metavariable-regex:
+          metavariable: $P
+          regex: .*points/(search|query).*
+      - pattern-not-inside: |
+          $B = {..., "filter": $F, ...}
+          ...
+      - pattern-not: $C.search(..., query_filter=$F, ...)
+      - pattern-not: $C.query_points(..., query_filter=$F, ...)
+    metadata:
+      floor: generic
+      fault: 'none injected (control)'
+  # (d) The application connects as a superuser / with no role, so RLS never applies.
+  - id: app-dsn-superuser-or-default-role
+    languages: [yaml]
+    severity: ERROR
+    message: >
+      Application DSN names the postgres superuser or no role at all (which resolves to the OS user,
+      the cluster owner on a local install). Row-level security is bypassed for superusers.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              dsn: $V
+      - metavariable-regex:
+          metavariable: $V
+          regex: ^postgresql://(postgres[:@]|localhost|127\.0\.0\.1|[^/@]*/)
+    metadata:
+      floor: generic
+      fault: 'f-superuser'
+  # (e1) Null owner reads as public: an owner check that admits a missing owner.
+  - id: null-owner-admits-everyone
+    languages: [python]
+    severity: ERROR
+    message: >
+      An ownership check that passes when the recorded owner is None. A chunk with no recorded
+      owner is readable by every caller.
+    patterns:
+      - pattern-either:
+          - pattern: |
+              if $OWNER is None or $OWNER == $CALLER:
+                  ...
+          - pattern: |
+              if $OWNER == $CALLER or $OWNER is None:
+                  ...
+          - pattern: |
+              if not $OWNER or $OWNER == $CALLER:
+                  ...
+    metadata:
+      floor: generic
+      fault: 'rag_api hole "chunk with no user_id belongs to everyone"'
+  # (e2) Authorizing a whole result set from its first element.
+  - id: authorize-result-set-from-first-hit
+    languages: [python]
+    severity: ERROR
+    message: >
+      A search result set is authorized by inspecting only its first element and then returned
+      whole. Every later hit is unchecked.
+    patterns:
+      - pattern: |
+          $D, $SC = $DOCS[0]
+          ...
+          $AUTH = $DOCS
+    metadata:
+      floor: semi-generic
+      fault: 'rag_api hole "/query authorized from documents[0]"'
+  # (e3) A route that lists or reads by caller-supplied ids with no owner scope on the store call.
+  - id: route-store-read-without-owner-scope
+    languages: [python]
+    severity: WARNING
+    message: >
+      Route reads the vector store by ids or lists all ids with no owner/user scope argument. If
+      the store is shared across users, this discloses other owners' rows.
+    patterns:
+      - pattern-either:
+          - pattern: $VS.get_all_ids(...)
+          - pattern: $VS.get_documents_by_ids($IDS, ...)
+          - pattern: $VS.get_filtered_ids($IDS, ...)
+          - pattern: $VS.similarity_search_with_score_by_vector(...)
+          - pattern: $VS.asimilarity_search_with_score_by_vector(...)
+      - pattern-not: $VS.$M(..., user_id=$U, ...)
+      - pattern-not: $VS.$M(..., owner=$U, ...)
+      - pattern-not: $VS.$M(..., scope=$U, ...)
+      - pattern-not: $VS.$M(..., user_ids=$U, ...)
+      - pattern-not: $VS.$M(..., owner_ids=$U, ...)
+      - pattern-not: $VS.$M(..., user_scope=$U, ...)
+      - pattern-not: $VS.$M(..., owners=$U, ...)
+      # A filter held in a variable is opaque to a pattern; assume it was built from a scope.
+      - pattern-not: $VS.$M(..., filter=$VAR, ...)
+      - pattern-not: |
+          $VS.$M(..., filter={..., "user_id": $F, ...}, ...)
+    metadata:
+      floor: app-shaped
+      fault: 'rag_api holes "/ids + /query_multiple", "/documents", "/documents/{id}/context", "DELETE /documents"'

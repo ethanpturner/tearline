@@ -32,7 +32,11 @@ authorization fix ([docs/eval/real-targets.md](docs/eval/real-targets.md)). Agai
 carries 1 under-retrieval, introduced by the fix itself, which a leak-only reading scores as
 perfectly secure. Against Open WebUI 0.8.12 and 0.9.0, the store returns hits with no access
 check at both versions and the fix for CVE-2026-44560 lives in the application, which is
-DEC-018 observed on a real advisory. Those runs are live and not replayable in CI.
+DEC-018 observed on a real advisory. Those runs are live and not replayable in CI. The same
+targets sit in a paired study beside a code-review panel ([docs/eval/paired-study.md](docs/eval/paired-study.md)):
+against ragref's eight injected faults `tearline` catches 6 of 8, the two it does not being the
+two the authored truth says it should not, and a Semgrep floor of hand-written rules catches 3 of
+8 with one false positive on every branch.
 
 ```
 uv run tearline verify benchmarks/untagged-chunk --variant faulted-naive
