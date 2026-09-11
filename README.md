@@ -26,6 +26,14 @@ moves `st_ctime`, and that is the signal separating a stale index from a broken 
 the wrong tenant while every control behaves correctly, which is the case for this tool and is now
 shown against real stores rather than argued from a fixture.
 
+It has also been pointed at two real applications at the commit before and after a shipped
+authorization fix ([docs/eval/real-targets.md](docs/eval/real-targets.md)). Against LibreChat's
+`rag_api`, 8 of 8 probes over-retrieve before pull request #319 and none after; the post-fix index
+carries 1 under-retrieval, introduced by the fix itself, which a leak-only reading scores as
+perfectly secure. Against Open WebUI 0.8.12 and 0.9.0, the store returns hits with no access
+check at both versions and the fix for CVE-2026-44560 lives in the application, which is
+DEC-018 observed on a real advisory. Those runs are live and not replayable in CI.
+
 ```
 uv run tearline verify benchmarks/untagged-chunk --variant faulted-naive
 uv run tearline evaluate     # every registered variant, scored against its expectations

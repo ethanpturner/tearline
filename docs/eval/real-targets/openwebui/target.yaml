@@ -1,0 +1,13 @@
+# NOT loadable by `tearline scan`: OWUI's Qdrant payload is {tenant_id, metadata:{user_id,...},
+# text}, not tearline's {chunk_id, entitlement_state, tenants, roles, principals}. The shipped
+# QdrantBackend raises KeyError 'chunk_id' against `open-webui_files` (demonstrated). A payload-
+# mapping adapter is the gap. The enforcement boundary is the app (has_access_to_file in
+# get_sources_from_items), not the store, so the differential axis needs an app-level retrieve().
+source:
+  kind: ownership-ledger        # would-be adapter: file_id/kb_id -> owner + AccessGrants, from OWUI's SQLite
+  system: open-webui
+backend:
+  kind: qdrant-multitenancy     # would-be adapter: physical `open-webui_files`, tenant_id=logical collection, payload map
+  base_url: http://127.0.0.1:6333
+  physical_collection: open-webui_files
+  enforcement_site: application  # CVE-2026-44560: store search returns hits with no access check at 0.8.12 AND 0.9.0

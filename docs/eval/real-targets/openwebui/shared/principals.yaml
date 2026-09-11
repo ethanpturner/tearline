@@ -1,0 +1,5 @@
+principals:
+  - id: user-alice
+    label: alice (owner of file owui-af1)
+  - id: user-bob
+    label: bob (owner of file owui-bf1)

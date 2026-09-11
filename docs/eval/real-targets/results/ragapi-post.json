@@ -1,0 +1,129 @@
+{
+  "chunks_examined": 4,
+  "chunks_untraceable": 0,
+  "propagation": [
+    {
+      "chunk_id": "771ff136-c043-4f50-b6a3-5d349d55e66b",
+      "verdict": "contradicted",
+      "cause": "undetermined",
+      "observed": {
+        "state": "unknown",
+        "tenants": [],
+        "roles": [],
+        "principals": [],
+        "classification": null
+      },
+      "expected": {
+        "state": "stated",
+        "tenants": [],
+        "roles": [],
+        "principals": [
+          "alice"
+        ],
+        "classification": null
+      },
+      "detail": ""
+    }
+  ],
+  "probes": [
+    {
+      "probe_id": "probe-rt-a1",
+      "principal_id": "alice",
+      "returned": [
+        "9635d79a-6835-4d3c-86e6-aa1181fc95dc"
+      ],
+      "over_retrieved": [],
+      "under_retrieved": [],
+      "verdict": "verified",
+      "outcome": "clean",
+      "absent_from_index": [],
+      "undetermined_returned": []
+    },
+    {
+      "probe_id": "probe-rt-a1",
+      "principal_id": "bob",
+      "returned": [],
+      "over_retrieved": [],
+      "under_retrieved": [],
+      "verdict": "verified",
+      "outcome": "clean",
+      "absent_from_index": [],
+      "undetermined_returned": []
+    },
+    {
+      "probe_id": "probe-rt-a2",
+      "principal_id": "alice",
+      "returned": [],
+      "over_retrieved": [],
+      "under_retrieved": [
+        "771ff136-c043-4f50-b6a3-5d349d55e66b"
+      ],
+      "verdict": "contradicted",
+      "outcome": "under-retrieval",
+      "absent_from_index": [],
+      "undetermined_returned": []
+    },
+    {
+      "probe_id": "probe-rt-a2",
+      "principal_id": "bob",
+      "returned": [],
+      "over_retrieved": [],
+      "under_retrieved": [],
+      "verdict": "verified",
+      "outcome": "clean",
+      "absent_from_index": [],
+      "undetermined_returned": []
+    },
+    {
+      "probe_id": "probe-rt-b1",
+      "principal_id": "alice",
+      "returned": [],
+      "over_retrieved": [],
+      "under_retrieved": [],
+      "verdict": "verified",
+      "outcome": "clean",
+      "absent_from_index": [],
+      "undetermined_returned": []
+    },
+    {
+      "probe_id": "probe-rt-b1",
+      "principal_id": "bob",
+      "returned": [
+        "80634f66-63ea-43bd-acd6-483d20eb8d4c"
+      ],
+      "over_retrieved": [],
+      "under_retrieved": [],
+      "verdict": "verified",
+      "outcome": "clean",
+      "absent_from_index": [],
+      "undetermined_returned": []
+    },
+    {
+      "probe_id": "probe-rt-b2",
+      "principal_id": "alice",
+      "returned": [],
+      "over_retrieved": [],
+      "under_retrieved": [],
+      "verdict": "verified",
+      "outcome": "clean",
+      "absent_from_index": [],
+      "undetermined_returned": []
+    },
+    {
+      "probe_id": "probe-rt-b2",
+      "principal_id": "bob",
+      "returned": [
+        "e2855851-6c8d-4fd3-8c98-26ce20cbb680"
+      ],
+      "over_retrieved": [],
+      "under_retrieved": [],
+      "verdict": "verified",
+      "outcome": "clean",
+      "absent_from_index": [],
+      "undetermined_returned": []
+    }
+  ],
+  "probes_skipped": [],
+  "partial": false,
+  "enforcement_site": "application"
+}

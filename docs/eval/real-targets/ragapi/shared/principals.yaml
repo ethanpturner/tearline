@@ -1,0 +1,5 @@
+principals:
+  - id: alice
+    label: alice (uploader of rt-a1, rt-a2)
+  - id: bob
+    label: bob (uploader of rt-b1, rt-b2)
