@@ -2,6 +2,10 @@
 
 Guidance for Claude Code when working in this repository.
 
+**Status: parked (DEC-025).** Active development stopped 2026-09-11. Bug fixes that keep a replay
+honest still land; new capability, and specifically new source adapters, does not. Work resumes only
+on a named adopter committed to one source system. Read DEC-025 before proposing a feature.
+
 ## What this is
 
 `tearline` verifies that a retrieval index's entitlements match the source system's, and that

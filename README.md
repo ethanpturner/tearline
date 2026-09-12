@@ -1,6 +1,35 @@
 # tearline
 
-**Status: runs against fixtures and against real stores.** `tearline` checks propagation, drift,
+**Status: parked (DEC-025).** Active development stopped on 2026-09-11. The tool runs, the corpus
+replays, and every published figure below stands; what stopped is new capability, and specifically
+new source adapters. Work resumes on one condition: a named adopter committed to one source system,
+with that connector's ongoing maintenance accounted for first. The Microsoft Graph adapter that was
+considered and declined is written up as an issue rather than left absent, so what was deliberately
+not built is legible.
+
+The reason is not that the problem went away. Glean's documentation puts a scheduled permissions
+sync at up to 28 days; Microsoft documents Restricted Content Discovery taking more than a week and
+calls it a temporary governance control. Both vendors publish their own ACL staleness and neither
+ships a measurement of it. Cerbos, OpenFGA and SpiceDB enforce entitlements and none verifies a
+deployed index. There is still no test framework for entitlements. The reason is that entitlement
+lives in SharePoint, Drive, Confluence and Snowflake, and reaching any of them is an OAuth
+application and a permanent maintenance obligation rather than a feature.
+
+What the park leaves behind is the measurement. Against LibreChat's `rag_api` at the commits either
+side of pull request #319, 8 of 8 probes over-retrieve before the fix and none after, and the
+post-fix index carries 1 under-retrieval introduced by the fix itself — a completeness regression
+that a leak-only reading scores as perfectly secure. Against Open WebUI 0.8.12 and 0.9.0 the store
+returns hits with no access check at both versions, so the fix for CVE-2026-44560 lives in the
+application, not the store. In the paired study against ragref's eight injected faults, `tearline`
+catches 6 of 8 — the two it misses being the two the authored truth says it should miss — while a
+Semgrep floor of rules written with knowledge of the faults catches 3 of 8 with one false positive
+on every branch including the clean one, and Semgrep's default rulesets catch 0 of 8. Five of the
+eight faults cannot be expressed as a code pattern at any effort. Across the offline corpus the
+false-positive count is 0 over 74 negative-set subjects. The pages are
+[docs/eval/real-targets.md](docs/eval/real-targets.md) and
+[docs/eval/paired-study.md](docs/eval/paired-study.md).
+
+**What it is: runs against fixtures and against real stores.** `tearline` checks propagation, drift,
 and differential retrieval across eight scenarios and sixteen variants offline. `tearline scan`
 runs the same three axes against a live system: document ACLs from a POSIX filesystem, and the
 index inventory and retrieval results from PostgreSQL + `pgvector` with row-level security
