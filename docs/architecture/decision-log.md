@@ -736,3 +736,52 @@ report's meaning is encoded, and the two would drift.
 **Tradeoffs.** A scan against a real store that returns one over-retrieved chunk now fails a
 pipeline. That is the intended reading; a caller who wants to proceed anyway has the report and the
 decision in front of them.
+
+---
+
+## DEC-025 — Development is parked; the measurements stand and no connector is written
+
+**Date:** 2026-09-11
+**Status:** Accepted
+
+**Decision.** Active development stops here. The tool is not retired, deprecated, or archived: the
+corpus, the three axes, the two backends, the filesystem source, and every published figure remain
+supported, and bug fixes that keep a replay honest still land. What stops is new capability, and
+specifically new source adapters. Work resumes on one condition — a named adopter committed to a
+specific source system, with the maintenance of that system's connector accounted for before the
+first line of it is written.
+
+**Why.** The gap this tool addresses is the best-evidenced of any in the series, and it is
+evidenced by the vendors themselves. Glean's documentation puts a scheduled permissions sync at up
+to 28 days. Microsoft documents Restricted Content Discovery taking more than a week and calls it a
+temporary governance control. Both publish their own ACL staleness; neither ships a measurement of
+it. Cerbos, OpenFGA and SpiceDB enforce entitlements and none verifies a deployed index. Knostic
+probes at the answer layer, closed, without reading the index or counting under-retrieval. There is
+no test framework for entitlements, and `docs/eval/real-targets.md` and `docs/eval/paired-study.md`
+are the first measurements anyone has published of one.
+
+What follows from that is not "build more". Entitlement lives in SharePoint, Drive, Confluence, and
+Snowflake, and reaching any of them is an OAuth application, a permissions model, a tenant-admin
+consent flow, and a maintenance obligation that does not end. One connector is a quarter of work
+and a permanent tax; four is the treadmill that ends single-maintainer projects. The honest options
+were to commit to one system deeply, or to stop at the boundary already demonstrated and say so.
+Stopping is the one that does not silently convert a measurement into an abandoned integration.
+
+**What the park protects.** The figures are the asset, and they are reproducible: 16 of 16 variants
+scored offline with zero false positives over 74 derived negative-set subjects (DEC-023); a live
+pre- and post-fix pair against LibreChat `rag_api` where 8 of 8 probes over-retrieve before the fix
+and 1 of 8 under-retrieves after it; Open WebUI 0.8.12 and 0.9.0 returning store hits with no
+access check at both versions. None of that depends on another connector existing.
+
+**Alternatives considered.** *Retire it.* Rejected: the gap is real, the measurements are cited
+work, and an archived repository states that the problem went away, which it did not. *Build the
+Microsoft Graph adapter anyway.* Rejected on the treadmill argument above, and recorded as an issue
+instead, so what was deliberately not built is legible rather than absent. *Generalise the source
+interface first.* Rejected under DEC-010: no generic abstraction before the second implementation,
+and a second implementation is exactly what is being declined.
+
+**Tradeoffs.** A parked tool decays against its dependencies, and the CI containers it tests
+against will move. The mitigation is that the offline corpus needs no service at all, so the
+replayable half of the evidence survives even if the live half stops running. The other cost is
+that the entitlement gap stays unaddressed by anyone; that is a real cost and it is not this
+project's to absorb alone.
